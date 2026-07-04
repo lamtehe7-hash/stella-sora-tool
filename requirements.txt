@@ -1,0 +1,8 @@
+adbutils>=2.8
+opencv-python>=4.8
+numpy>=1.24
+pydantic>=2.5
+pywebio>=1.8
+pywebview>=6.0
+# dev-only: build exe (dev_tools/build_exe.ps1)
+pyinstaller>=6.0

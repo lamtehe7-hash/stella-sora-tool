@@ -1,0 +1,903 @@
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from module.base.button import Button
+from module.config import ROOT
+from module.exception import TaskError
+from module.logger import logger
+from module.ui.page import UI
+from module.ui.pages import ASCENSION_TITLE, page_asc_diff
+
+# --- Trang difficulty (khảo sát 2026-07-04 đêm) ---
+# Quick Battle: tốn vé Monolith (badge x1 cạnh nút), CHỈ sáng khi difficulty đang chọn đã clear.
+# Game nhớ stage + difficulty + disc của lần chơi trước — tool giữ nguyên, không tự chọn.
+ASCENSION_QUICK_BATTLE = Button('ascension/ASCENSION_QUICK_BATTLE.png', area=(795, 615, 985, 690))
+# --- Màn chọn squad: preset Potential tự áp theo thành viên squad ("Currently applied.") ---
+SQUAD_TITLE = Button('ascension/SQUAD_TITLE.png', area=(105, 8, 255, 80))
+SQUAD_NEXT = Button('ascension/SQUAD_NEXT.png', area=(1070, 635, 1255, 700))
+SQUAD_PRESET_SET = Button('ascension/SQUAD_PRESET_SET.png', area=(1080, 72, 1260, 120))
+# --- Màn Disc Combo (giữ setup lần trước) ---
+DISC_TITLE = Button('ascension/DISC_TITLE.png', area=(105, 8, 295, 80))
+DISC_START_BATTLE = Button('ascension/DISC_START_BATTLE.png', area=(1065, 630, 1255, 700))
+# --- Trong run ---
+# Ribbon 👍 trên thẻ thuộc preset; 2 biến thể chữ ("Recommended" / "Rcmd: Lv. N") nhưng
+# template là icon 👍 tròn nên khớp cả hai (0.90+).
+ASCENSION_RECOMMEND = Button('ascension/ASCENSION_RECOMMEND.png', area=(280, 120, 1200, 240),
+                             threshold=0.8)
+ASCENSION_SELECT = Button('ascension/ASCENSION_SELECT.png', area=(150, 560, 1150, 650),
+                          threshold=0.75)  # nút có animation nhấp nháy, score tụt tới ~0.78
+ASCENSION_EVENT_CHOICE = Button('ascension/ASCENSION_EVENT_CHOICE.png')  # icon chat trong option
+ASCENSION_CONTINUE = Button('ascension/ASCENSION_CONTINUE.png')
+# Icon 📍 teal góc phải hộp thoại NPC — nhận diện hội thoại để tap vượt ngay
+DIALOG_PIN = Button('ascension/DIALOG_PIN.png', area=(990, 625, 1055, 678))
+# Toggle Brief (rút gọn mô tả thẻ, chạy nhanh hơn) — chỉ hiện ở màn chọn thẻ
+BRIEF_OFF = Button('ascension/BRIEF_OFF.png', area=(995, 18, 1150, 68))
+NETWORK_RETRY_RUN = Button('common/NETWORK_RETRY.png', area=(657, 463, 910, 553),
+                           name='NETWORK_RETRY_RUN')
+# --- Phòng Shop (Trade Domain 1-6/2-9/3-8 + phòng cuối "big sale", khảo sát 2026-07-05) ---
+# Options phòng shop: "Purchase at the shop" / "Enhance (Free|60|... 🪙)" / "Nah, let's go up"
+# (phòng cuối: Purchase / Enhance / nút đỏ Leave Monolith). Enhance lần đầu MỖI phòng miễn phí,
+# sau đó +60/lần: Free -> 60 -> 120 -> 180 -> ... Starcoin mất trắng khi rời Monolith.
+SHOP_PURCHASE = Button('ascension/SHOP_PURCHASE.png', area=(370, 240, 920, 570), threshold=0.75)
+SHOP_ENHANCE = Button('ascension/SHOP_ENHANCE.png', area=(370, 240, 920, 570), threshold=0.75)
+# Trong shop UI: 2 kệ x 4 slot (trên: Potential Drink = +1 thẻ/level, dưới: Melody x5 note);
+# slot mua xong thành Sold Out (tag tối, giá hết màu navy); refresh kệ (100 coin, 2 lượt).
+SHOP_SHELF = Button('ascension/SHOP_SHELF.png', area=(560, 230, 680, 330))     # tag penguin kệ trên
+SHOP_DIALOG = Button('ascension/SHOP_DIALOG.png', area=(280, 150, 520, 230))   # header dialog Purchase
+SHOP_NOTES = Button('ascension/SHOP_NOTES.png', area=(430, 20, 860, 80))       # "Musical Notes Acquired!"
+# Tag SALE! đỏ trên slot đang giảm giá (match trong ROI từng slot)
+SHOP_SALE = Button('ascension/SHOP_SALE.png', threshold=0.75)
+# Panel "Relevant Harmony Skills" góc trên-trái khi mở dialog mua Melody: chỉ hiện nếu note đó
+# được Harmony Skill của disc hiện tại dùng -> đây chính là "mặt hàng cần thiết" (Melody không
+# hiện panel = không skill nào cần -> bỏ qua). Dialog Drink không bao giờ có panel này.
+SHOP_RELEVANT = Button('ascension/SHOP_RELEVANT.png', area=(10, 14, 320, 62))
+# Nút refresh bộ thẻ ở màn chọn thẻ (góc phải-dưới, 40 coin/lần) — chỉ có ở màn nhận thẻ mới,
+# màn chọn thẻ của Enhance không có. Cùng icon với refresh kệ shop nhưng khác ngữ cảnh.
+CARD_REFRESH = Button('ascension/CARD_REFRESH.png', area=(1190, 600, 1252, 662))
+# Chữ "(Free" trong option "Enhance (Free 🪙)" — match trong dải chữ cạnh SHOP_ENHANCE.
+# Threshold 0.88: bản thân Free khớp ~1.0, "(120" chỉ 0.74 (đo 2026-07-05).
+ENHANCE_FREE = Button('ascension/ENHANCE_FREE.png', threshold=0.88)
+# --- Phòng cuối + kết thúc run ---
+LEAVE_MONOLITH = Button('ascension/LEAVE_MONOLITH.png', area=(360, 250, 920, 560))
+# Màn Record sau khi rời: Save Record (teal, góc phải-dưới) -> dialog "Record Saved" Confirm
+SAVE_RECORD = Button('ascension/SAVE_RECORD.png', area=(1030, 625, 1245, 690))
+# Nút Confirm teal của dialog trong run: bắt cả biến thể giữa (640,508) lẫn phải (780,508)
+ASC_DIALOG_CONFIRM = Button('common/DIALOG_CONFIRM.png', area=(500, 455, 920, 560),
+                            name='ASC_DIALOG_CONFIRM')
+
+CARD_X = (295, 640, 985)  # tâm 3 thẻ ở màn chọn thẻ
+CARD_Y = 270  # tap vùng art phía trên thẻ — ripple của tap không che thanh Lv (y~402+)
+RUN_TIMEOUT = 2400  # run brief ~5 phút + 4 phòng shop mua/enhance theo chiến lược
+
+# Toạ độ shop UI (khảo sát shop_ui_*.png 2026-07-05)
+SHOP_SLOTS = ((700, 250), (849, 250), (999, 250), (1148, 250),   # kệ trên: Potential Drink
+              (700, 420), (849, 420), (999, 420), (1148, 420))   # kệ dưới: Melody x5
+SHOP_BUY_XY = (640, 520)       # nút Purchase trong dialog
+SHOP_CLOSE_XY = (935, 191)     # X đóng dialog Purchase
+SHOP_BACK_XY = (66, 37)        # nút back thoát shop UI (CHỈ trên màn shop!)
+SHOP_REFRESH_XY = (1220, 633)  # refresh kệ (100 coin) — chỉ dùng ở phòng cuối
+SHOP_DISMISS_XY = (640, 690)   # tap đóng màn "Notes Acquired" (né (66,37) = mở Monolith Bag)
+
+# --- Chiến lược shop v3 (Img_test + shop_survey 2026-07-05): SALE trước, Melody chỉ mua khi
+# "cần thiết" (dialog có panel Relevant Harmony Skills), chừa coin đủ enhance tới mốc 180. ---
+SHOP_ROW_Y = (250, 448)              # y1 dải giá của kệ trên / kệ dưới
+SHOP_COL_X = (700, 849, 999, 1148)   # tâm x 4 slot
+COIN_ROI = (1183, 16, 1252, 52)      # pill số dư Starcoin góc phải-trên (mọi màn trong run)
+ENHANCE_STEP = 60                    # thang giá enhance mỗi phòng: (Free ->) 60 -> 120 -> 180...
+#                                      Bậc Free chỉ có 1 LẦN CẢ RUN (phòng shop đầu tiên);
+#                                      các phòng sau vào thẳng 60 (đo 2 run thật 2026-07-05)
+#                                      -> giá luôn đọc từ dòng option, bộ đếm chỉ là fallback
+ENHANCE_MILESTONE = 180              # giữa run enhance tới hết bậc này rồi dừng, giữ coin
+ENHANCE_RESERVE = 360                # coin phải chừa khi mua sắm = 60 + 120 + 180
+CARD_REFRESH_COST = 40               # refresh bộ thẻ ở màn chọn thẻ
+SHOP_REFRESH_COST = 100              # refresh kệ shop (tối đa 2 lượt/phòng)
+SHOP_MIN_PRICE = 45                  # giá rẻ nhất từng thấy — mốc "vẫn còn mua được gì đó"
+
+# --- Đọc level trên thẻ (màn chọn/nâng thẻ) ---
+# Thanh Lv dưới tên thẻ: "Lv. N" (thẻ mới nhận thẳng cấp N) hoặc "Lv. A ▶ B" (nâng A->B,
+# B có thể nhảy >1 cấp). Chữ cấp hiện tại màu NAVY, cấp sau nâng màu XANH LÁ.
+# Thẻ không có thanh Lv = Super Rare (không có hệ level) — là thẻ core của build.
+LV_NAVY = (128, 92, 72)     # BGR
+LV_GREEN = (33, 155, 110)   # BGR
+LV_BAR_BG = (229, 226, 218)  # BGR nền xám nhạt của thanh Lv (phân biệt với nền thẻ trắng)
+CARD_COLS = ((175, 419), (519, 763), (863, 1107))  # dải x thanh Lv của 3 thẻ
+LV_ROI_Y = (393, 467)       # phủ cả thẻ thường (bar ~y437) lẫn thẻ đang focus (bar ~y402)
+
+_DIGIT_TPLS: dict | None = None
+
+
+def _digit_templates() -> dict:
+    """Mask nhị phân chữ số 1..6 (assets/en/ascension/digits/d?.png), chuẩn hoá 12x16."""
+    global _DIGIT_TPLS
+    if _DIGIT_TPLS is None:
+        _DIGIT_TPLS = {}
+        d = ROOT / 'assets' / 'en' / 'ascension' / 'digits'
+        for p in sorted(d.glob('d*.png')):
+            m = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+            if m is not None:
+                _DIGIT_TPLS[int(p.stem[1])] = cv2.resize(m, (12, 16),
+                                                         interpolation=cv2.INTER_AREA)
+    return _DIGIT_TPLS
+
+
+def _color_mask(img, ref, tol=45):
+    return (np.linalg.norm(img.astype(np.int16) - np.array(ref, dtype=np.int16), axis=2)
+            < tol).astype(np.uint8)
+
+
+# --- OCR số Starcoin (số dư + giá shop) -------------------------------------
+# Template 12x16 sinh bởi dev_tools/build_coin_digits.py từ ảnh khảo sát (3 biến thể cùng
+# typeface: pill trắng h~11, giá navy h~19, số đếm note h~11). Nhiều mẫu / chữ số.
+_COIN_TPLS: list | None = None
+
+
+def _coin_templates() -> list:
+    global _COIN_TPLS
+    if _COIN_TPLS is None:
+        _COIN_TPLS = []
+        d = ROOT / 'assets' / 'en' / 'ascension' / 'coin_digits'
+        for p in sorted(d.glob('d*.png')):
+            m = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+            if m is not None:
+                _COIN_TPLS.append((int(p.stem[1]),
+                                   cv2.resize(m, (12, 16),
+                                              interpolation=cv2.INTER_AREA).astype(np.int16)))
+    return _COIN_TPLS
+
+
+def _digit_runs(mask, min_h, max_h, min_w) -> list:
+    """Cụm cột liền kề (KHÔNG khoan dung khe — chữ số coin tách rời nhau), lọc kích thước.
+    Dấu phẩy nghìn (h~4) và rác nhỏ tự rớt nhờ min_h."""
+    cols = mask.sum(0)
+    out, x, w = [], 0, len(cols)
+    while x < w:
+        if cols[x]:
+            x2 = x
+            while x2 < w and cols[x2]:
+                x2 += 1
+            ys = np.where(mask[:, x:x2].sum(1) > 0)[0]
+            h = ys.max() - ys.min() + 1
+            if min_h <= h <= max_h and x2 - x >= min_w:
+                out.append((x, x2, mask[ys.min():ys.max() + 1, x:x2]))
+            x = x2
+        x += 1
+    return out
+
+
+def _read_number(mask, min_h, max_h, min_w=2):
+    """Ghép số từ mask nhị phân, trái -> phải. None nếu không có chữ số hoặc có glyph
+    không nhận diện chắc chắn (<0.75) — glyph lạ dump vào log/coin_glyphs/ để bổ sung."""
+    runs = _digit_runs(mask, min_h, max_h, min_w)
+    if not runs:
+        return None
+    digits = ''
+    for _, _, crop in runs:
+        a = cv2.resize(crop * 255, (12, 16), interpolation=cv2.INTER_AREA).astype(np.int16)
+        best_v, best_s = None, 0.0
+        for v, t in _coin_templates():
+            s = 1 - np.abs(a - t).mean() / 255
+            if s > best_s:
+                best_v, best_s = v, s
+        if best_s < 0.75:
+            try:
+                d = ROOT / 'log' / 'coin_glyphs'
+                d.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(str(d / f'{int(time.time() * 1000)}.png'), crop * 255)
+            except Exception:
+                pass
+            return None
+        digits += str(best_v)
+    return int(digits)
+
+
+def read_coins(img):
+    """Số dư Starcoin từ pill góc phải-trên (chữ trắng nền navy). None = không đọc được."""
+    x1, y1, x2, y2 = COIN_ROI
+    roi = img[y1:y2, x1:x2]
+    return _read_number((roi.min(axis=2) >= 190).astype(np.uint8), min_h=9, max_h=14)
+
+
+def _price_mask(roi):
+    """Mask chữ số giá navy đậm trên tag trắng — loại giá gốc gạch ngang (xám nhạt),
+    tên item (nằm dưới ROI) và vạch trang trí (lọc theo chiều cao ở _digit_runs)."""
+    b = roi[:, :, 0].astype(np.int16)
+    g = roi[:, :, 1].astype(np.int16)
+    r = roi[:, :, 2].astype(np.int16)
+    return ((b > 90) & (b < 200) & (r < 110) & (b - r > 45) & (g < 150)).astype(np.uint8)
+
+
+def slot_offer(img, idx: int):
+    """Đọc slot shop thứ idx (0-7): (giá, đang_sale) hoặc None nếu Sold Out/không đọc được
+    (tag Sold Out chuyển nền tối, giá mất màu navy -> mask trống)."""
+    row, col = divmod(idx, 4)
+    y1, cx = SHOP_ROW_Y[row], SHOP_COL_X[col]
+    price = _read_number(_price_mask(img[y1:y1 + 32, cx - 45:cx + 62]),
+                         min_h=15, max_h=24, min_w=4)
+    if price is None or price < 10:
+        return None
+    badge = img[max(0, y1 - 44):y1 + 10, cx - 70:cx - 2]
+    r = cv2.matchTemplate(badge, SHOP_SALE.template, cv2.TM_CCOEFF_NORMED)
+    return price, float(r.max()) >= SHOP_SALE.threshold
+
+
+def enhance_cost(img, mx: int, my: int):
+    """Giá enhance đọc từ dòng option "Enhance (Free|60|... 🪙)" quanh tâm chữ Enhance
+    (mx, my). 0 = Free; None = không đọc được. Chữ số h=13, ngoặc h=16, chữ thường h≤11
+    (đo shopevt_*) — lọc h 11-15 chỉ giữ chữ số; icon coin vàng bị mask navy loại sẵn."""
+    band = img[max(0, my - 18):my + 18, mx + 40:mx + 230]
+    r = cv2.matchTemplate(band, ENHANCE_FREE.template, cv2.TM_CCOEFF_NORMED)
+    if float(r.max()) >= ENHANCE_FREE.threshold:
+        return 0
+    return _read_number(_price_mask(band), min_h=11, max_h=15, min_w=4)
+
+
+def dialog_price(img):
+    """Giá trong dialog Purchase (hàng "Price 🪙 [giá gạch] giá") — nguồn giá CHUẨN,
+    dùng đối chiếu với giá đọc từ kệ (kệ thi thoảng đọc sai). None = không đọc được."""
+    return _read_number(_price_mask(img[436:468, 690:820]), min_h=14, max_h=24, min_w=4)
+
+
+def _row_bands(mask, min_gap=5) -> list:
+    """Các dải dòng có pixel, tách nhau bởi >= min_gap dòng trống. Trả [(y1, y2)] bao gồm 2 đầu."""
+    rows = mask.sum(1)
+    bands, y, h = [], 0, len(rows)
+    while y < h:
+        if rows[y]:
+            y2, gap = y, 0
+            while y2 + 1 < h and gap < min_gap:
+                y2 += 1
+                gap = gap + 1 if rows[y2] == 0 else 0
+            y2 -= gap
+            bands.append((y, y2))
+            y = y2 + gap + 1
+        else:
+            y += 1
+    return bands
+
+
+def _blobs(mask) -> list:
+    """Cụm cột liền (cho phép khe <=2px) trong mask 1 dòng chữ. Trả [(x1, x2, crop)]."""
+    cols = mask.sum(0)
+    out, x, w = [], 0, len(cols)
+    while x < w:
+        if cols[x]:
+            x2 = x
+            while x2 < w and (cols[x2] or (x2 + 2 < w and cols[x2 + 1:x2 + 3].sum())):
+                x2 += 1
+            ys = np.where(mask[:, x:x2].sum(1) > 0)[0]
+            out.append((x, x2, mask[ys.min():ys.max() + 1, x:x2]))
+            x = x2
+        x += 1
+    return out
+
+
+def _classify_digit(crop):
+    """Nhận diện chữ số từ mask glyph. Không chắc (<0.72) -> None + dump glyph để bổ sung."""
+    tpls = _digit_templates()
+    if not tpls:
+        return None
+    a = cv2.resize(crop * 255, (12, 16), interpolation=cv2.INTER_AREA).astype(np.int16)
+    best_v, best_s = None, 0.0
+    for v, t in tpls.items():
+        s = 1 - np.abs(a - t.astype(np.int16)).mean() / 255
+        if s > best_s:
+            best_v, best_s = v, s
+    if best_s < 0.72:
+        try:
+            d = ROOT / 'log' / 'lv_glyphs'
+            d.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(d / f'{int(time.time() * 1000)}.png'), crop * 255)
+        except Exception:
+            pass
+        return None
+    return best_v
+
+
+def _find_lv_trio(navy_mask):
+    """Tìm digit cấp hiện tại trong mask navy CỦA THANH BAR (đã lọc nền xám nên navy chỉ có
+    thể là "Lv. N[+k]"). Tuỳ anti-alias, "Lv." render thành 1-3 blob: dính ["Lv." w18-23],
+    tách ["Lv" w13-17]["." nhỏ], hoặc mảnh ["L"]["v"]["."]. Digit = blob dạng chữ số đầu tiên
+    sau mốc kết thúc cụm "Lv.". Trả (y1, y2, digit_crop) hoặc None."""
+    for y1, y2 in _row_bands(navy_mask):
+        if not 8 <= y2 - y1 + 1 <= 18:
+            continue
+        bl = _blobs(navy_mask[y1:y2 + 1])
+        start = None
+        for i, b in enumerate(bl):
+            w, h = b[1] - b[0], b[2].shape[0]
+            if w >= 18:               # "Lv." dính liền
+                start = i + 1
+                break
+            if w <= 4 and h <= 4:     # dấu '.' rời (nằm thấp)
+                start = i + 1
+                break
+        if start is None:
+            if len(bl) >= 2 and 13 <= bl[0][1] - bl[0][0] <= 17:
+                start = 1             # ["Lv" w13-17] không thấy dấu chấm
+            else:
+                continue
+        for b in bl[start:]:
+            w, h = b[1] - b[0], b[2].shape[0]
+            if 3 <= w <= 11 and 9 <= h <= 16:
+                return y1, y2, b[2]
+    return None
+
+
+def _bar_bands(roi) -> list:
+    """Các dải dòng thuộc thanh Lv (nền xám nhạt chiếm >50% chiều ngang, cao >= 12 dòng).
+    Tiêu đề/mô tả thẻ nằm trên nền trắng nên bị loại — tránh trio giả từ chữ cái."""
+    frac = _color_mask(roi, LV_BAR_BG, tol=14).mean(axis=1)
+    bands, y, h = [], 0, len(frac)
+    while y < h:
+        if frac[y] > 0.5:
+            y2 = y
+            while y2 < h and frac[y2] > 0.5:
+                y2 += 1
+            if y2 - y >= 12:
+                bands.append((y, y2))
+            y = y2
+        y += 1
+    return bands
+
+
+def card_lv(img, ci: int):
+    """Đọc thanh level của thẻ thứ ci (0-2). None = không có thanh (Super Rare);
+    (0, N) = thẻ mới nhận thẳng cấp N; (A, B) = nâng cấp A -> B."""
+    x1, x2 = CARD_COLS[ci]
+    roi = img[LV_ROI_Y[0]:LV_ROI_Y[1], x1:x2]
+    for by1, by2 in _bar_bands(roi):
+        bar = roi[max(0, by1 - 2):by2 + 2]
+        trio = _find_lv_trio(_color_mask(bar, LV_NAVY))
+        if trio is None:
+            continue
+        y1, y2, digit_crop = trio
+        cur = _classify_digit(digit_crop)
+        green = _color_mask(bar[max(0, y1 - 2):y2 + 3], LV_GREEN)
+        # thứ tự green: [▶][digit][chevron]; chevron w>=15 bị loại, blob 1px = nhiễu
+        gb = [b for b in _blobs(green) if 2 <= b[1] - b[0] < 15]
+        tgt = _classify_digit(gb[1][2]) if len(gb) >= 2 else None
+        if tgt is None:
+            return (0, cur if cur is not None else 1)  # thẻ mới cấp N (parse fail -> coi như 1)
+        return (cur if cur is not None else max(1, tgt - 1), tgt)
+    return None
+
+
+def _gain(lv) -> int:
+    """Lợi tức chọn thẻ: Super Rare (không level, core build) = 99 (ưu tiên tuyệt đối);
+    thẻ mới "Lv. N" = N; nâng "A ▶ B" = B - A."""
+    if lv is None:
+        return 99
+    return max(lv[1] - lv[0], 0)
+
+
+def _card_index(x: int) -> int:
+    return 0 if x < 550 else (1 if x < 900 else 2)
+
+
+def pick_card(img, recs: list) -> tuple:
+    """Chọn thẻ trong các thẻ 👍: mức tăng level lớn nhất thắng (Super Rare không level = 99,
+    ưu tiên tuyệt đối); hoà -> thẻ trái nhất. Trả (chỉ số thẻ 0-2, mô tả lý do)."""
+    if len(recs) == 1:
+        return _card_index(recs[0]), '👍 duy nhất'
+    best_g, best_ci, detail = -1, 0, []
+    for x in recs:
+        ci = _card_index(x)
+        g = _gain(card_lv(img, ci))
+        detail.append(f'thẻ{ci + 1}:+{g if g < 99 else "SR"}')
+        if g > best_g:
+            best_g, best_ci = g, ci
+    return best_ci, f"👍 x{len(recs)} [{', '.join(detail)}] -> thẻ{best_ci + 1}"
+
+
+class Ascension(UI):
+    """Chạy 1 run Monolith/ngày bằng Quick Battle, chọn thẻ theo Potential Preset của người chơi.
+
+    Cách game vận hành (khảo sát + wiki + guide cộng đồng):
+    - Preset Potential tự áp theo squad trùng thành viên; thẻ thuộc preset hiện ribbon 👍 ở màn
+      chọn thẻ. Nhiều thẻ 👍 -> chọn thẻ có MỨC TĂNG LEVEL lớn nhất (đọc thanh "Lv. A ▶ B"/"Lv. N");
+      thẻ 👍 không có thanh level = Super Rare core -> ưu tiên tuyệt đối. Hoà -> thẻ trái nhất.
+    - Phòng Shop (1-6, 2-9, 3-8, phòng cuối): mua theo chiến lược — ưu tiên hàng SALE, Drink
+      mua tự do, Melody CHỈ mua khi "cần thiết" (dialog mua hiện panel Relevant Harmony Skills
+      = note được skill của disc dùng); luôn chừa 360 coin để Enhance đủ Free+60+120+180.
+      Enhance mỗi phòng dừng ở mốc 180 để dành coin cho shop sau; PHÒNG CUỐI vét sạch:
+      mua -> refresh kệ (100 coin, ≤2 lượt) -> enhance tới hết -> mua vét lần chót
+      (Starcoin mất trắng khi rời Monolith).
+    - Màn chọn thẻ không có thẻ 👍 nào -> refresh bộ thẻ 1 lần (40 coin, nếu màn đó có nút);
+      vẫn không có 👍 thì lấy thẻ đang focus như cũ.
+    - Người chơi cần chơi tay 1 lần trước: clear difficulty muốn farm, lưu preset trùng squad,
+      chọn disc — game nhớ toàn bộ cho các lần Quick Battle sau.
+    """
+
+    def run(self) -> None:
+        self.ui_ensure(page_asc_diff)
+
+        self.device.screenshot()
+        if not self.appear(ASCENSION_QUICK_BATTLE):
+            logger.warning('Ascension: nút Quick Battle không sáng (difficulty chưa clear '
+                           'hoặc hết vé?) — cần chơi tay 1 lần, bỏ qua hôm nay')
+            self.config.task_delay('Ascension', server_reset=True)
+            return
+
+        self.device.click(ASCENSION_QUICK_BATTLE)
+        if not self.wait_until_appear(SQUAD_TITLE, timeout=10):
+            raise TaskError('Ascension: màn chọn Squad không mở sau Quick Battle')
+        self.device.screenshot()
+        if not self.appear(SQUAD_PRESET_SET):
+            logger.warning('Ascension: squad hiện tại có thể CHƯA gắn Potential Preset — '
+                           'run vẫn chạy nhưng sẽ không có thẻ 👍 để ưu tiên')
+        self.device.click(SQUAD_NEXT)
+
+        if not self.wait_until_appear(DISC_TITLE, timeout=10):
+            raise TaskError('Ascension: màn Disc Combo không mở')
+        self.device.click(DISC_START_BATTLE)
+        logger.info('Ascension: đã vào run — bắt đầu vòng roguelike')
+
+        self._run_loop()
+        self.config.task_delay('Ascension', server_reset=True)
+
+    # --- vòng roguelike -----------------------------------------------------
+
+    def _run_loop(self) -> None:
+        end = time.time() + RUN_TIMEOUT
+        unknown = 0
+        step = 0
+        last_evt = None         # (x, y) option event vừa bấm
+        evt_repeat = 0          # số lần bấm liên tiếp cùng 1 option mà màn không đổi
+        shop_done = False       # đã mua ở phòng shop GIỮA RUN hiện tại chưa
+        shop_last_done = False  # đã mua ở PHÒNG CUỐI chưa (nhận diện qua nút Leave Monolith;
+        #                         cờ riêng vì giữa shop 3-8 và phòng cuối có thể không có
+        #                         event/continue nào để reset shop_done)
+        while time.time() < end:
+            img = self.device.screenshot()
+            step += 1
+            suffix = step % 3  # xoay tên click để không vấp GameTooManyClickError khi spam hợp lệ
+
+            known = (self.appear(ASCENSION_TITLE) or self.appear(NETWORK_RETRY_RUN)
+                     or self.appear(ASCENSION_SELECT) or self.appear(ASCENSION_EVENT_CHOICE)
+                     or self.appear(ASCENSION_CONTINUE) or self.appear(DIALOG_PIN)
+                     or self.appear(SAVE_RECORD) or self.appear(ASC_DIALOG_CONFIRM)
+                     or self.appear(SHOP_SHELF) or self.appear(SHOP_NOTES)
+                     or self.appear(SHOP_DIALOG) or bool(self._recommend_xs(img)))
+            if known:
+                unknown = 0
+
+            # Hết run: game trả về trang difficulty
+            if self.appear(ASCENSION_TITLE):
+                logger.info(f'Ascension: run kết thúc sau {step} bước')
+                return
+
+            if self.appear(NETWORK_RETRY_RUN):
+                self.device.click(NETWORK_RETRY_RUN)
+                logger.info('Ascension: Network Error — Retry, đợi 10s')
+                time.sleep(10)
+                continue
+
+            # Màn Record cuối run: lưu record rồi Confirm (dialog "Record Saved")
+            if self.appear(SAVE_RECORD):
+                logger.info('Ascension: Save Record')
+                self.device.click_xy(*SAVE_RECORD.last_match, name=f'ASC_SAVE_{suffix}')
+                time.sleep(2)
+                continue
+
+            # Dialog Confirm trong run: "Leave anyway?" (phải) / "Record Saved" (giữa)
+            if self.appear(ASC_DIALOG_CONFIRM):
+                self.device.click_xy(*ASC_DIALOG_CONFIRM.last_match, name=f'ASC_CFM_{suffix}')
+                time.sleep(2.5)
+                continue
+
+            # Safety net: bấm mãi 1 option mà màn không đổi ở phòng cuối -> rời Monolith
+            if evt_repeat >= 2 and self.appear(LEAVE_MONOLITH):
+                logger.info('Ascension: hết coin nâng thẻ — Leave Monolith')
+                self.device.click_xy(*LEAVE_MONOLITH.last_match, name=f'ASC_LEAVE_{suffix}')
+                last_evt, evt_repeat, shop_done = None, 0, False
+                time.sleep(2.5)
+                continue
+
+            # Màn chọn thẻ: bật Brief nếu đang tắt (chạy nhanh hơn), rồi chọn thẻ
+            if self._handle_card_pick(img, suffix):
+                last_evt, evt_repeat = None, 0
+                time.sleep(2.5)
+                continue
+
+            # Phòng Shop (Trade Domain / phòng cuối): mua chiến lược + enhance trọn gói 1 lần
+            if self.appear(SHOP_PURCHASE):
+                last_room = self.appear(LEAVE_MONOLITH)
+                if not (shop_last_done if last_room else shop_done):
+                    self._do_shop_room(last_room=last_room)
+                    if last_room:
+                        shop_last_done = True
+                    else:
+                        shop_done = True
+                    last_evt, evt_repeat = None, 0
+                    time.sleep(2)
+                    continue
+                # Đã xong phòng này -> rời đi
+                if self.appear(LEAVE_MONOLITH):
+                    logger.info('Ascension: shop + enhance xong — Leave Monolith')
+                    self.device.click_xy(*LEAVE_MONOLITH.last_match, name=f'ASC_LEAVE_{suffix}')
+                else:
+                    logger.info('Ascension: shop + enhance xong — đi tiếp')
+                    self._handle_event_choice(img, suffix)  # option cuối: "Nah, let's go up"
+                last_evt, evt_repeat = None, 0
+                time.sleep(3)
+                continue
+
+            # Hồi phục nếu lạc trong shop UI / popup shop (vd _do_shop bị ngắt giữa chừng)
+            if self.appear(SHOP_NOTES):
+                self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{suffix}')
+                time.sleep(1.5)
+                continue
+            if self.appear(SHOP_DIALOG):
+                self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{suffix}')
+                time.sleep(1.5)
+                continue
+            if self.appear(SHOP_SHELF):
+                logger.info('Ascension: đang ở shop UI ngoài luồng — thoát ra')
+                self.device.click_xy(*SHOP_BACK_XY, name=f'ASC_SHOPBK_{suffix}')
+                time.sleep(2.5)
+                continue
+
+            clicked = self._handle_event_choice(img, suffix)
+            if clicked:
+                evt_repeat = evt_repeat + 1 if clicked == last_evt else 0
+                last_evt = clicked
+                shop_done = False  # đã qua event khác -> phòng shop kế là phòng mới
+                time.sleep(3)
+                continue
+
+            if self.appear(ASCENSION_CONTINUE):
+                self.device.click_xy(640, 653, name=f'ASC_CONT_{suffix}')
+                last_evt, evt_repeat, shop_done = None, 0, False
+                time.sleep(2)
+                continue
+
+            if self.appear(DIALOG_PIN):
+                self.device.click_xy(740, 585, name=f'ASC_DLG_{suffix}')
+                shop_done = False
+                time.sleep(1.5)
+                continue
+
+            # Màn lạ: chờ 3 nhịp rồi tap vùng hộp thoại — vô hại trên cutscene/overlay lạ;
+            # trên màn "Select anywhere to continue" (ASCENDED/Affinity) tap này cũng đi tiếp
+            unknown += 1
+            if unknown >= 3:
+                self.device.click_xy(740, 585, name=f'ASC_UNK_{suffix}')
+                unknown = 0
+            time.sleep(2)
+
+        raise TaskError(f'Ascension: run không kết thúc sau {RUN_TIMEOUT}s')
+
+    # --- chọn thẻ -----------------------------------------------------------
+
+    def _handle_card_pick(self, img, suffix: int) -> bool:
+        """Chọn thẻ ở màn chọn/nâng thẻ. Nhiều thẻ 👍 -> thẻ có mức tăng level lớn nhất
+        (Super Rare không level = ưu tiên tuyệt đối; hoà -> trái nhất). Không 👍 -> refresh
+        bộ thẻ 1 lần (40 coin, nếu màn có nút) rồi đánh giá lại; vẫn không -> thẻ focus."""
+        recs = self._recommend_xs(img)
+        has_select = self.appear(ASCENSION_SELECT)
+        if not recs and not has_select:
+            return False
+
+        if self.appear(BRIEF_OFF):
+            self.device.click(BRIEF_OFF)
+            logger.info('Ascension: bật Brief mode')
+            time.sleep(1)
+            return True
+
+        if recs:
+            ci, why = pick_card(img, recs)
+            target = CARD_X[ci]
+        else:
+            # Không thẻ 👍: thử đổi bộ thẻ 1 lần (màn Enhance không có nút refresh -> tự bỏ qua)
+            if (has_select and not getattr(self, '_card_refreshed', False)
+                    and self.appear(CARD_REFRESH)):
+                coins = read_coins(img)
+                if coins is None or coins >= CARD_REFRESH_COST:
+                    self._card_refreshed = True
+                    logger.info(f'Ascension: không thẻ 👍 — refresh bộ thẻ '
+                                f'({CARD_REFRESH_COST} coin, số dư {coins})')
+                    self.device.click(CARD_REFRESH)
+                    time.sleep(2.5)
+                    return True
+            target = ASCENSION_SELECT.last_match[0]
+            why = 'game focus sẵn'
+
+        # Guard chống dao động: nếu tap focus >=3 lần liên tiếp mà vẫn chưa Select được
+        # (vd thanh Lv của 1 thẻ đọc chập chờn làm quyết định lật qua lại) -> chọn luôn
+        # thẻ đang focus thay vì tap tiếp.
+        taps = getattr(self, '_focus_taps', 0)
+        if has_select and (abs(ASCENSION_SELECT.last_match[0] - target) < 80 or taps >= 3):
+            if taps >= 3 and abs(ASCENSION_SELECT.last_match[0] - target) >= 80:
+                logger.warning(f'Ascension: dao động chọn thẻ ({taps} lần tap) — '
+                               f'chọn thẻ đang focus x={ASCENSION_SELECT.last_match[0]}')
+            else:
+                logger.info(f'Ascension: Select thẻ x={target} ({why})')
+            self._focus_taps = 0
+            self._card_refreshed = False  # lượt chọn kết thúc -> lượt sau được refresh lại
+            self.device.click_xy(*ASCENSION_SELECT.last_match, name=f'ASC_SEL_{suffix}')
+        else:
+            # Thẻ đích chưa focus: tap thẻ để nút Select nhảy sang dưới thẻ đó
+            self._focus_taps = taps + 1
+            self.device.click_xy(target, CARD_Y, name=f'ASC_CARD_{suffix}')
+        return True
+
+    # --- shop (Trade Domain) --------------------------------------------------
+
+    def _do_shop_room(self, last_room: bool) -> None:
+        """Phòng shop trọn gói: mua theo chiến lược (chừa 360 coin enhance) -> Enhance theo
+        thang giá -> phòng cuối thì quay lại vét coin còn thừa (mua bất chấp cần thiết)."""
+        self._shop_refreshes = 0
+        self._do_shop(last_room=last_room)
+        self._do_enhance(last_room=last_room)
+        if not last_room:
+            return
+        img = self.device.screenshot()
+        coins = read_coins(img)
+        if coins is not None and coins >= SHOP_MIN_PRICE and self.appear(SHOP_PURCHASE):
+            logger.info(f'Ascension: phòng cuối còn {coins} coin — quay lại shop vét nốt')
+            self._do_shop(last_room=True, burn=True)
+
+    def _do_shop(self, last_room: bool, burn: bool = False) -> None:
+        """Từ màn options shop: mở shop UI, mua theo thứ tự SALE trước rồi giá rẻ trước.
+        Drink (kệ trên) mua tự do; Melody (kệ dưới) chỉ mua khi dialog có panel Relevant
+        Harmony Skills (= note cần thiết). Luôn chừa ENHANCE_RESERVE coin (trừ lượt burn
+        vét phòng cuối — mua tất khi còn tiền). Phòng cuối refresh kệ ≤2 lượt. Xong thoát."""
+        img = self.device.screenshot()
+        if not self.appear(SHOP_PURCHASE):
+            logger.warning('Ascension: mất màn options shop — bỏ qua mua sắm')
+            return
+        mode = 'vét coin' if burn else ('phòng cuối' if last_room else 'giữa run')
+        logger.info(f'Ascension: phòng Shop — mua sắm ({mode})')
+        self.device.click_xy(640, SHOP_PURCHASE.last_match[1], name='ASC_SHOP_OPEN')
+        time.sleep(3)
+        reserve = 0 if burn else ENHANCE_RESERVE
+        while True:
+            if not self._shop_settle():
+                logger.warning('Ascension: lạc khỏi shop UI — dừng mua')
+                return
+            img = self.device.screenshot()
+            coins = read_coins(img)
+            if coins is None:
+                coins = self._read_coins_stable()
+                img = self.device.image
+            offers = {i: slot_offer(img, i) for i in range(8)}
+            avail = [(i, p, sale) for i, off in offers.items() if off for p, sale in [off]]
+            logger.info(f'Ascension: coin={coins} | kệ: '
+                        + ', '.join(f"slot{i}={'SALE ' if s else ''}{p}" for i, p, s in avail))
+            if coins is None and not burn:
+                logger.warning('Ascension: không đọc được số dư coin — bỏ qua mua sắm '
+                               'để chắc chắn đủ tiền enhance (glyph lạ đã dump log/coin_glyphs)')
+                break
+            # SALE trước (rẻ trước trong nhóm), rồi hàng thường rẻ trước
+            avail.sort(key=lambda o: (not o[2], o[1]))
+            for i, price, sale in avail:
+                if coins is not None and coins - price < reserve:
+                    continue  # slot sau có thể rẻ hơn -> không break
+                _, coins = self._buy_slot(i, price, sale, coins, reserve, burn)
+            # Refresh kệ: chỉ phòng cuối, còn lượt, và dư tiền mua tiếp sau khi refresh
+            coins = read_coins(self.device.screenshot())
+            if (not last_room or self._shop_refreshes >= 2 or coins is None
+                    or coins - SHOP_REFRESH_COST - reserve < SHOP_MIN_PRICE):
+                break
+            if not self._shop_settle():
+                return
+            logger.info(f'Ascension: refresh kệ lượt {self._shop_refreshes + 1} '
+                        f'({SHOP_REFRESH_COST} coin, số dư {coins})')
+            self.device.click_xy(*SHOP_REFRESH_XY, name=f'ASC_SHOPREF_{self._shop_refreshes}')
+            self._shop_refreshes += 1
+            time.sleep(2.5)
+        if self._shop_settle():
+            self.device.click_xy(*SHOP_BACK_XY, name='ASC_SHOP_EXIT')
+            time.sleep(2.5)
+
+    def _buy_slot(self, i: int, price: int, sale: bool, coins, reserve: int, burn: bool):
+        """Mở dialog slot i và mua nếu hợp lệ. Trả (đã_mua, số_dư_mới). Melody không có panel
+        Relevant Harmony Skills = không cần thiết -> đóng dialog (trừ lượt burn). Giá lấy lại
+        từ dialog (chuẩn hơn kệ — run 2026-07-05 kệ đọc sai vài slot) để chốt ngân sách."""
+        if not self._shop_settle():
+            return False, coins
+        self.device.click_xy(*SHOP_SLOTS[i], name=f'ASC_SLOT_{i}')
+        time.sleep(1.8)
+        img = self.device.screenshot()
+        if not self.appear(SHOP_DIALOG):
+            return False, coins  # Sold Out / màn khác chen ngang
+        if i >= 4 and not burn and not self.appear(SHOP_RELEVANT):
+            logger.info(f'Ascension: slot{i} Melody không Harmony Skill nào cần — bỏ qua')
+            self._audit_dump(f'skip_slot{i}')
+            self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
+            time.sleep(1.5)
+            return False, coins
+        dlg = dialog_price(img)
+        if dlg is not None and dlg != price:
+            logger.info(f'Ascension: slot{i} giá dialog {dlg} != giá kệ {price} — tin dialog')
+            self._audit_dump(f'price_slot{i}')
+            price = dlg
+        if coins is not None and coins - price < reserve:
+            logger.info(f'Ascension: slot{i} giá {price} vượt ngân sách '
+                        f'(số dư {coins}, chừa {reserve}) — bỏ qua')
+            self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
+            time.sleep(1.5)
+            return False, coins
+        self.device.click_xy(*SHOP_BUY_XY, name=f'ASC_BUY_{i}')
+        time.sleep(2)
+        self.device.screenshot()
+        if self.appear(SHOP_DIALOG):
+            # Không mua được (thiếu coin dù đã tính?) — đóng dialog đi tiếp
+            logger.warning(f'Ascension: slot{i} mua hụt (giá {price}, số dư ước {coins})')
+            self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
+            time.sleep(1.5)
+            return False, coins
+        self._shop_settle()  # Drink -> chọn 1-trong-3 thẻ; Melody -> popup Notes
+        new = read_coins(self.device.screenshot())
+        expect = coins - price if coins is not None else None
+        if new is None:
+            new = expect
+        elif expect is not None and new not in (expect, expect - CARD_REFRESH_COST):
+            # Lệch đúng 40 = refresh thẻ trong màn chọn của Drink (đã tự log) -> không cảnh báo
+            logger.warning(f'Ascension: slot{i} số dư đọc {new} != kỳ vọng {expect} '
+                           f'({coins} - {price}) — tin số đọc được')
+            self._audit_dump(f'recon_slot{i}')
+        logger.info(f"Ascension: đã mua slot{i} ({'SALE ' if sale else ''}{price}) — còn {new}")
+        return True, new
+
+    def _read_coins_stable(self, tries: int = 3, delay: float = 1.3):
+        """read_coins với retry — pill hay None thoáng qua khi số coin đang animation
+        (glyph bị cắt giữa chừng, thấy trong run 03:43 2026-07-05)."""
+        for _ in range(tries):
+            v = read_coins(self.device.screenshot())
+            if v is not None:
+                return v
+            time.sleep(delay)
+        return None
+
+    def _audit_dump(self, tag: str) -> None:
+        """Lưu screenshot hiện tại vào log/asc_audit/ làm bằng chứng đối chiếu OCR/quyết định."""
+        try:
+            d = ROOT / 'log' / 'asc_audit'
+            d.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(d / f'{int(time.time())}_{tag}.png'), self.device.image)
+        except Exception:
+            pass
+
+    def _do_enhance(self, last_room: bool) -> None:
+        """Enhance theo GIÁ ĐỌC TỪ DÒNG OPTION "Enhance (Free|60|... 🪙)" (phòng thường
+        Free -> 60 -> 120 -> 180...; PHÒNG CUỐI không có bậc Free — run 2026-07-05). Mỗi lần
+        enhance mở màn chọn 1-trong-3 thẻ (xử lý qua _settle_to_options). Giữa run dừng sau
+        mốc 180 để dành coin cho shop sau; phòng cuối bấm tới khi hết tiền. Guard: số dư
+        không đổi 2 nhịp liên tiếp khi bậc trả phí -> dừng."""
+        step, prev_coins, same, expect, last_cost = 0, None, 0, None, None
+        while True:
+            img = self.device.screenshot()
+            if not self.appear(SHOP_PURCHASE):
+                if not self._settle_to_options():
+                    return
+                img = self.device.screenshot()
+            if not self.appear(SHOP_ENHANCE):
+                logger.info('Ascension: không còn option Enhance — dừng')
+                return
+            cost = enhance_cost(img, *SHOP_ENHANCE.last_match)
+            if cost is None:  # màn animation -> chụp lại vài nhịp
+                for _ in range(2):
+                    time.sleep(1.2)
+                    cost = enhance_cost(self.device.screenshot(), *SHOP_ENHANCE.last_match)
+                    if cost is not None:
+                        break
+            if cost is None:
+                # Mù giá: bậc kế = giá bậc trước + 60 (fallback này phản ánh đúng thang tăng
+                # nên vẫn vượt mốc -> dừng sạch giữa run; đầu run coi như 60)
+                cost = (last_cost + ENHANCE_STEP) if last_cost is not None else ENHANCE_STEP
+                logger.warning(f'Ascension: không đọc được giá enhance — ước tính {cost}')
+            if not last_room and cost > ENHANCE_MILESTONE:
+                logger.info(f'Ascension: enhance đã tới mốc {ENHANCE_MILESTONE} '
+                            f'— giữ coin cho shop sau')
+                return
+            coins = read_coins(img)
+            if coins is None and cost > 0:
+                coins = self._read_coins_stable()  # pill hay None lúc số đang animation
+            if expect is not None and coins is not None and coins != expect:
+                logger.warning(f'Ascension: số dư {coins} != kỳ vọng sau enhance {expect}')
+                self._audit_dump(f'enh_recon_{step}')
+            if cost > 0:
+                if coins is None:
+                    logger.warning('Ascension: không đọc được số dư — dừng enhance trả phí')
+                    return
+                if coins < cost:
+                    logger.info(f'Ascension: số dư {coins} < giá enhance {cost} — dừng')
+                    return
+            if coins is not None and coins == prev_coins and cost > 0:
+                same += 1
+                if same >= 2:
+                    logger.warning('Ascension: enhance không trừ coin 2 nhịp — dừng')
+                    return
+            else:
+                same = 0
+            prev_coins = coins
+            last_cost = cost
+            expect = coins - cost if coins is not None else None
+            logger.info(f"Ascension: Enhance bậc {step + 1} "
+                        f"({'Free' if cost == 0 else cost} coin, số dư {coins})")
+            self.device.click_xy(640, SHOP_ENHANCE.last_match[1], name=f'ASC_ENH_{step % 3}')
+            step += 1
+            time.sleep(2.5)
+            if not self._settle_to_options():
+                return
+
+    def _settle_to_options(self, timeout: int = 45) -> bool:
+        """Xử lý các màn phụ (chọn thẻ enhance/drink, popup Notes, dialog) cho tới khi thấy
+        lại màn options shop (SHOP_PURCHASE). False nếu quá timeout."""
+        end = time.time() + timeout
+        n = 0
+        while time.time() < end:
+            img = self.device.screenshot()
+            n += 1
+            if self.appear(SHOP_PURCHASE):
+                return True
+            if self.appear(SHOP_NOTES):
+                self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{n % 3}')
+                time.sleep(1.5)
+                continue
+            if self.appear(ASC_DIALOG_CONFIRM):
+                self.device.click_xy(*ASC_DIALOG_CONFIRM.last_match, name=f'ASC_CFM_{n % 3}')
+                time.sleep(2)
+                continue
+            if self._handle_card_pick(img, n % 3):
+                time.sleep(2.5)
+                continue
+            time.sleep(1.5)
+        logger.warning('Ascension: không về được màn options shop sau enhance')
+        return False
+
+    def _shop_settle(self, timeout: int = 30) -> bool:
+        """Xử lý các màn phụ sau khi mua (chọn 1-trong-3 thẻ của Drink, popup Notes của Melody)
+        cho tới khi thấy lại shop UI. False nếu quá timeout vẫn không về shop."""
+        end = time.time() + timeout
+        n = 0
+        while time.time() < end:
+            img = self.device.screenshot()
+            n += 1
+            if self.appear(SHOP_SHELF):
+                return True
+            if self.appear(SHOP_NOTES):
+                self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{n % 3}')
+                time.sleep(1.5)
+                continue
+            if self._handle_card_pick(img, n % 3):
+                time.sleep(2.5)
+                continue
+            # Màn 1-trong-3 của Drink có thể không 👍 và không focus sẵn (không có Select):
+            # tap thẻ giữa để focus rồi vòng sau Select. Tap này vô hại trên các màn khác.
+            if n % 4 == 3:
+                self.device.click_xy(CARD_X[1], CARD_Y, name=f'ASC_SETTLE_{n % 3}')
+            time.sleep(1.5)
+        return False
+
+    # --- event / nhận diện chung ----------------------------------------------
+
+    def _handle_event_choice(self, img, suffix: int) -> tuple | None:
+        """Sự kiện NPC nhiều lựa chọn: bấm option chat DƯỚI CÙNG (an toàn — thường là rời đi/
+        từ chối). Trả về (x, y) đã bấm để vòng ngoài phát hiện bấm mãi không đổi màn."""
+        tpl = ASCENSION_EVENT_CHOICE.template
+        r = cv2.matchTemplate(img, tpl, cv2.TM_CCOEFF_NORMED)
+        ys, xs = np.where(r >= ASCENSION_EVENT_CHOICE.threshold)
+        if len(ys) == 0:
+            return None
+        y = int(ys.max()) + tpl.shape[0] // 2
+        x = int(xs[ys.argmax()]) + 240  # click giữa dòng option, lệch phải khỏi icon
+        self.device.click_xy(x, y, name=f'ASC_EVT_{suffix}')
+        return (x, y)
+
+    def _recommend_xs(self, img) -> list:
+        """Toạ độ x các ribbon 👍 Recommended (gộp cụm >60px), trái -> phải."""
+        x1, y1, x2, y2 = ASCENSION_RECOMMEND.area
+        tpl = ASCENSION_RECOMMEND.template
+        r = cv2.matchTemplate(img[y1:y2, x1:x2], tpl, cv2.TM_CCOEFF_NORMED)
+        _, xs = np.where(r >= ASCENSION_RECOMMEND.threshold)
+        centers = sorted(int(x) + x1 + tpl.shape[1] // 2 for x in set(xs.tolist()))
+        out = []
+        for c in centers:
+            if not out or c - out[-1] > 60:
+                out.append(c)
+        return out

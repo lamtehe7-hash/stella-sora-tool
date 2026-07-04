@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!-- Giao diện desktop kiểu Alas cho Stella Sora Tool. Chạy trong pywebview (app.py). -->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Stella Sora Tool</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="header">
+  <div class="header-left">
+    <div class="logo">🌠</div>
+    <span class="app-name">SST</span>
+    <span id="status-pill" class="status-pill">
+      <span id="status-dot" class="dot dot-idle"></span>
+      <span id="status-text">Chưa chạy</span>
+    </span>
+  </div>
+  <div id="page-title" class="header-title">Overview</div>
+  <div class="header-right"></div>
+</header>
+
+<div id="layout">
+  <!-- Rail trái: Home / sst / Cài đặt (giống Home / alas / Manage của Alas) -->
+  <nav id="rail">
+    <button class="rail-item" data-page="home" title="Trang chủ">
+      <span class="rail-icon">&lt;/&gt;</span><span class="rail-label">Home</span>
+    </button>
+    <button class="rail-item active" data-page="overview" title="Scheduler">
+      <span class="rail-icon">▷</span><span class="rail-label">sst</span>
+    </button>
+    <button class="rail-item" data-page="settings" title="Cấu hình">
+      <span class="rail-icon">⚙</span><span class="rail-label">Cấu hình</span>
+    </button>
+  </nav>
+
+  <!-- Sidebar menu -->
+  <nav id="sidebar">
+    <div class="menu-item active" data-page="overview">Overview</div>
+    <div class="menu-group">Task</div>
+    <div id="menu-tasks"><!-- JS render: mỗi task 1 dòng --></div>
+  </nav>
+
+  <!-- ===== Page: Overview ===== -->
+  <main id="page-overview" class="page">
+    <div class="col-left">
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">Scheduler</span>
+          <button id="btn-scheduler" class="btn btn-primary">Bắt đầu</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><span class="card-title">Đang chạy</span></div>
+        <div id="list-running" class="task-list"><div class="empty">Không có task</div></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><span class="card-title">Sẵn sàng</span></div>
+        <div id="list-pending" class="task-list scroll"><div class="empty">Không có task</div></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><span class="card-title">Chờ đến hạn</span></div>
+        <div id="list-waiting" class="task-list scroll"><div class="empty">Không có task</div></div>
+      </section>
+    </div>
+
+    <div class="col-right">
+      <section class="card card-log">
+        <div class="card-head">
+          <span class="card-title">Log</span>
+          <button id="btn-autoscroll" class="btn btn-primary">Auto Scroll ON</button>
+        </div>
+        <pre id="log-body"></pre>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== Page: Task detail ===== -->
+  <main id="page-task" class="page hidden">
+    <div class="col-narrow">
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title" id="task-title">Task</span>
+          <label class="switch">
+            <input type="checkbox" id="task-enable">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="kv"><span>Chạy kế tiếp</span><b id="task-next">—</b></div>
+        <div class="task-actions">
+          <button id="btn-run-now" class="btn btn-primary">Chạy ngay</button>
+        </div>
+        <p class="hint">“Chạy ngay” đặt task đến hạn tức thì. Nếu scheduler đang chạy, task sẽ được
+        nhặt trong vòng lặp; nếu không, tool chạy đơn lẻ task này rồi dừng.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===== Page: Home ===== -->
+  <main id="page-home" class="page hidden">
+    <div class="home-wrap">
+      <div class="home-logo">🌠</div>
+      <h1>Stella Sora Tool</h1>
+      <p class="muted">Chọn giao diện / Change theme</p>
+      <div class="theme-row">
+        <button class="btn btn-ghost" data-theme="light">Sáng</button>
+        <button class="btn btn-dark" data-theme="dark">Tối</button>
+      </div>
+      <p class="muted home-note">
+        Tool tự động hoá Stella Sora (EN) trên giả lập — miễn phí &amp; mã nguồn để dùng cá nhân.<br>
+        Bản desktop này tương đương giao diện web (<code>python gui.py</code>).
+      </p>
+    </div>
+  </main>
+
+  <!-- ===== Page: Settings ===== -->
+  <main id="page-settings" class="page hidden">
+    <div class="col-narrow">
+      <section class="card">
+        <div class="card-head"><span class="card-title">Cấu hình</span></div>
+        <div class="form">
+          <label>Serial giả lập <input id="cfg-serial" type="text"></label>
+          <label>Đường dẫn adb.exe <input id="cfg-adb" type="text"></label>
+          <label>Giờ reset daily (UTC, HH:MM) <input id="cfg-reset" type="text"></label>
+          <label class="check-row">
+            <input id="cfg-close" type="checkbox"> Đóng game khi Cleanup
+          </label>
+          <button id="btn-save-cfg" class="btn btn-primary">Lưu cấu hình</button>
+          <span id="cfg-saved" class="saved-note hidden">✓ Đã lưu</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

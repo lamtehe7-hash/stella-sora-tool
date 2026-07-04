@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Build output
+build/
+dist/
+
+# Runtime (tự tạo khi chạy: log xoay vòng, config cá nhân serial/adb)
+log/
+config/
+
+# Ảnh chụp khảo sát / test cục bộ (có thể lộ thông tin tài khoản game)
+screenshots/
+Img_test/
+
+# Clone tham khảo AzurLaneAutoScript (repo GPL riêng, không thuộc project này)
+reference/
+
+# Claude Code local
+.claude/settings.local.json
