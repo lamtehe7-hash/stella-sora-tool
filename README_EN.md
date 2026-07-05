@@ -72,6 +72,20 @@ venv\Scripts\pyinstaller.exe --noconfirm app.spec
 Output: `dist\app\app.exe` + `_internal\` + `assets\`. `assets/` must sit **next to the exe**;
 `config/` and `log/` are created next to the exe at runtime.
 
+### Publishing a release (maintainer)
+
+Create a GitHub Release with **one command** (requires [GitHub CLI](https://cli.github.com) signed in: `gh auth login`):
+
+```powershell
+# 1) Add a "## vX.Y.Z" section to CHANGELOG_EN.md (the script pulls notes from it)
+# 2) Run:
+.\dev_tools\release.ps1 -Version 0.1.1 -PreRelease
+```
+
+The script automatically: builds the exe → packages `StellaSoraTool-vX.Y.Z-win64.zip` → extracts notes
+from the CHANGELOG → creates the tag + release + uploads the zip. Add `-DryRun` for a no-op test, or
+`-SkipBuild` to reuse an existing build.
+
 ---
 
 ## ⚖️ Disclaimer & Terms of Use

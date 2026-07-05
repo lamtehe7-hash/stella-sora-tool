@@ -71,6 +71,20 @@ venv\Scripts\pyinstaller.exe --noconfirm app.spec
 Kết quả: `dist\app\app.exe` + `_internal\` + `assets\`. `assets/` phải nằm **cạnh exe**;
 `config/` và `log/` tự tạo cạnh exe khi chạy.
 
+### Phát hành release (maintainer)
+
+Tạo GitHub Release bằng **1 lệnh** (cần [GitHub CLI](https://cli.github.com) đã đăng nhập: `gh auth login`):
+
+```powershell
+# 1) Thêm mục "## vX.Y.Z" vào CHANGELOG_EN.md (script lấy notes từ đây)
+# 2) Chạy:
+.\dev_tools\release.ps1 -Version 0.1.1 -PreRelease
+```
+
+Script tự động: build exe → đóng gói `StellaSoraTool-vX.Y.Z-win64.zip` → trích notes từ CHANGELOG →
+tạo tag + release + upload zip. Thêm `-DryRun` để chạy thử (không đụng GitHub), `-SkipBuild` để dùng
+lại bản build sẵn.
+
 ---
 
 ## ⚖️ Tuyên bố & Điều khoản sử dụng
