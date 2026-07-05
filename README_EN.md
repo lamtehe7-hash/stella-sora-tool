@@ -99,6 +99,11 @@ Please read carefully before downloading or using. **By downloading/using this t
 
 ---
 
+## 📄 License
+
+Released under the **[PolyForm Noncommercial License 1.0.0](LICENSE)** — you may use, modify and share
+it for **noncommercial** purposes; **any commercial use is prohibited**.
+
 ## 📚 Documentation
 
 - [CHANGELOG_EN.md](CHANGELOG_EN.md) / [CHANGELOG_VN.md](CHANGELOG_VN.md) — release details.
