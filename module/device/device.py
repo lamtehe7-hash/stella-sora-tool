@@ -28,7 +28,7 @@ class Device:
     # --- screenshot ---
 
     def screenshot(self) -> np.ndarray:
-        """Chụp màn hình, trả về BGR ndarray. Game landscape phải ra 720x1280 (h,w)."""
+        """Chụp màn hình, trả về BGR ndarray. Game landscape → ảnh 1280×720 (W×H), tức shape (720, 1280) = (h, w)."""
         for attempt in range(3):
             img = self._decode(self.adb.screenshot_png())
             if img.shape[:2] == (720, 1280):
