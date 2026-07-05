@@ -10,7 +10,9 @@ import numpy as np
 
 sys.path.insert(0, r'e:\Claude\Stella Sora Tool')
 from tasks.ascension import (ASCENSION_RECOMMEND, SHOP_DIALOG, SHOP_ENHANCE,  # noqa: E402
-                             SHOP_NOTES, SHOP_PURCHASE, SHOP_SHELF, card_lv, pick_card)
+                             SHOP_NOTES, SHOP_PURCHASE, SHOP_SHELF, card_lv, pick_card,
+                             read_selected_difficulty, weekly_is_capped,
+                             event_options, event_tag_has_coin)
 
 RAW = Path(r'e:\Claude\Stella Sora Tool\screenshots\raw')
 fails = []
@@ -85,6 +87,47 @@ for btn, files in NEG.items():
     for f in files:
         img = cv2.imread(str(RAW / f))
         check(f'{btn.name} - {f}', not btn.match(img))
+
+# --- 4. Đọc Difficulty đang chọn (page_asc_diff) + reject màn khác ---
+for f, expect in {
+    'go/05_difficulty2.png': 2,      # Diff2 đang chọn (pill navy), phần còn lại trắng
+    'go/18_bernina.png': None,       # màn event -> không nhận nhầm
+    'go/event_13.png': None,         # màn shop options
+    'go/02_ascension.png': None,     # trang chọn Monolith
+    'shop_survey/shop_ui_00.png': None,
+}.items():
+    img = cv2.imread(str(RAW / f))
+    got = read_selected_difficulty(img)
+    check(f'read_selected_difficulty {f}', got == expect, f'{got}')
+
+# --- 5. Weekly Limit capped (page_ascension) ---
+for f, expect in {
+    'weekly_capped_3000.png': True,   # 3000/3000 -> capped
+    'go/02_ascension.png': False,     # meter cũ N<3000 (2 vế lệch số chữ số) -> chưa capped, không nhận nhầm
+}.items():
+    img = cv2.imread(str(RAW / f))
+    got = weekly_is_capped(img)
+    check(f'weekly_is_capped {f}', got == expect, f'{got}')
+
+# --- 6. Event: chọn option thưởng item-free (tag không coin) thay vì mù bấm dưới cùng ---
+def _pick_event(img):
+    opts = event_options(img)
+    if not opts:
+        return None
+    for cx, cy in opts:
+        if not event_tag_has_coin(img, cy):
+            return cy
+    return opts[-1][1]
+
+
+for f, expect_y in {
+    'event_potential_vs_coin.png': 355,   # top = Rare Potential (không coin) -> chọn, KHÔNG lấy 30 coin
+    'go/event_01.png': 355,               # top = Potential (vs Note) -> chọn top
+    'event_gamble_3opt.png': 520,         # 3 gamble coin -> fallback option dưới cùng
+}.items():
+    img = cv2.imread(str(RAW / f))
+    got = _pick_event(img)
+    check(f'event pick {f}', got == expect_y, f'y={got}')
 
 print(f'=== {"PASS hết" if not fails else f"{len(fails)} FAIL: {fails}"} ===')
 sys.exit(1 if fails else 0)

@@ -49,6 +49,7 @@ MSG = {
 PRESET_BEHAVIORS = ('warn', 'skip', 'abort')
 CARD_PRIORITIES = ('level_gain', 'super_rare', 'leftmost')
 MAP_KEYS = ('', 'currents', 'dust', 'storm', 'misstep')
+OBJECTIVES = ('power', 'score')
 TRIAL_KEYS = ('basic', 'tierup', 'skill', 'emblem')
 
 
@@ -170,6 +171,9 @@ class Api:
         cfg = Config.load()
         a = cfg.ascension
         a.runs_per_session = max(1, min(50, int(data['runs_per_session'])))
+        _diff = int(data.get('difficulty', a.difficulty))
+        a.difficulty = _diff if _diff == 0 or 2 <= _diff <= 8 else a.difficulty
+        a.skip_when_capped = bool(data.get('skip_when_capped', a.skip_when_capped))
         if data.get('map') in MAP_KEYS:
             a.map = data['map']
         a.squad = max(0, min(20, int(data['squad'])))
@@ -177,9 +181,14 @@ class Api:
             a.preset_behavior = data['preset_behavior']
         if data.get('card_priority') in CARD_PRIORITIES:
             a.card_priority = data['card_priority']
+        a.smart_event_choice = bool(data.get('smart_event_choice', a.smart_event_choice))
+        if data.get('objective') in OBJECTIVES:
+            a.objective = data['objective']
         a.buy_melody_when_needed_only = bool(data['buy_melody_when_needed_only'])
         a.enhance_milestone = max(0, int(data['enhance_milestone']))
         a.enhance_reserve = max(0, int(data['enhance_reserve']))
+        a.enhance_reserve_last_room = max(0, int(data.get('enhance_reserve_last_room',
+                                                          a.enhance_reserve_last_room)))
         a.refresh_shelf_last_room = bool(data['refresh_shelf_last_room'])
         a.refresh_cards_no_recommend = bool(data['refresh_cards_no_recommend'])
         a.brief_mode = bool(data['brief_mode'])

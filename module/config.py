@@ -48,7 +48,16 @@ class AscensionConfig(BaseModel):
     # --- Chọn map Monolith ---
     # '' = giữ map game nhớ (không đụng); hoặc 'currents'|'dust'|'storm'|'misstep' — 4 Monolith
     # cố định (Currents and Shadows / Dust and Flames / Storm and Thunder / Misstep On One).
+    # ⚠️ KHÔNG dùng 'misstep' để farm: đây là tháp tập sự ngắn (~7 tầng), stub/coin thấp
+    # (xem docs/ascension-strategy.md §1).
     map: str = ''
+    # --- Chọn Difficulty (khảo sát go/05_difficulty2.png) ---
+    # Phần thưởng tăng ĐƠN ĐIỆU theo difficulty (Diff2≈210, Diff7≈430 stub/clear; +coin; +trần điểm
+    # Record) — giữ bậc game nhớ có thể bỏ lỡ nhiều thưởng.
+    #   0 = TỰ nâng lên bậc đã-clear CAO NHẤT (quét lên từ bậc hiện tại tới khi Quick Battle hết sáng;
+    #       chỉ đi LÊN, không bao giờ chọn bậc chưa clear) — MẶC ĐỊNH.
+    #   2..8 = ép đúng bậc đó (chỉ đổi nếu Quick Battle bậc đó sáng; không thì cảnh báo + giữ nguyên).
+    difficulty: int = 0
     # --- Chọn Squad/Team ---
     # 0 = giữ nguyên squad game nhớ (không đụng vào); 1..N = tự vuốt tới squad này trước khi vào run.
     squad: int = 0
@@ -63,13 +72,32 @@ class AscensionConfig(BaseModel):
     #   super_rare = ưu tiên thẻ Super Rare, còn lại lấy trái nhất
     #   leftmost   = luôn lấy thẻ 👍 trái nhất
     card_priority: str = 'level_gain'
+    # --- Mục tiêu tối ưu (POWER vs SCORE) ---
+    #   power = Record tái sử dụng mạnh: mua potential + enhance, Melody chỉ khi Harmony Skill cần.
+    #           MẶC ĐỊNH — khớp meta CN 塔8 (potential > note cho sát thương). Đã kiểm chứng.
+    #   score = farm Journey Ticket Stub bằng điểm Record (mua nhiều Note + thẻ mới, tối thiểu enhance).
+    #           ⚠️ THỬ NGHIỆM, chưa code + chỉ đáng nếu stub phụ thuộc rank Record khi LƯU (cần test
+    #           live — xem docs/ascension-strategy.md §8). Đặt 'score' hiện chạy như 'power' + cảnh báo.
+    objective: str = 'power'
     # --- Chiến lược Shop ---
     buy_melody_when_needed_only: bool = True   # Melody chỉ mua khi dialog có panel Relevant Harmony Skills
     enhance_milestone: int = 180               # giữa run enhance tới hết bậc này rồi giữ coin cho shop sau
-    enhance_reserve: int = 360                 # coin luôn chừa khi mua sắm (đủ Free+60+120+180)
-    refresh_shelf_last_room: bool = True       # phòng cuối refresh kệ shop (100 coin, ≤2 lượt)
+    enhance_reserve: int = 360                 # coin chừa khi mua sắm GIỮA RUN (đủ Free+60+120+180)
+    # PHÒNG CUỐI chừa ít hơn (chỉ 2 bậc enhance rẻ nhất 60+120=180) để CẢ 2 refresh charge được dùng
+    # (refresh surface SALE; 1 SALE potential 45-72 rẻ/level hơn enhance bậc 180). Xem docs §3.
+    enhance_reserve_last_room: int = 180
+    # Refresh kệ shop: chỉ ở PHÒNG CUỐI (EV tối ưu — coin mất trắng khi rời nên opportunity cost ~0;
+    # phòng đầu/giữa opportunity cost cao). 100 coin/lượt, tối đa 2 lượt/RUN (research-gated Lab2=1/Lab3=2).
+    refresh_shelf_last_room: bool = True
     refresh_cards_no_recommend: bool = True    # màn chọn thẻ không có 👍 -> refresh bộ thẻ 1 lần (40 coin)
+    # Event/Choice Domain: ưu tiên option cho phần thưởng ITEM free (Potential/Note — tag KHÔNG có
+    # icon coin) thay vì mù bấm option dưới cùng. Không đọc được -> vẫn về option dưới cùng (an toàn).
+    # BỎ TICK để quay lại hành vi cũ (luôn bấm dưới cùng).
+    smart_event_choice: bool = True
     # --- Tinh chỉnh run ---
+    # Bỏ qua Ascension khi Weekly Limit đã đầy (N/3000) — run lúc đó = 0 stub, chỉ phí vé.
+    # BỎ TICK nếu vẫn muốn chạy để build sức mạnh Record (POWER) dù đã capped.
+    skip_when_capped: bool = True
     brief_mode: bool = True                    # bật Brief (rút gọn mô tả thẻ, chạy nhanh hơn)
     save_record: bool = True                   # cuối run lưu Record (giữ setup cho Quick Battle sau)
     run_timeout: int = 2400                    # thời gian tối đa 1 run (giây)

@@ -65,6 +65,7 @@ const I18N = {
   opt_levelgain:  { vi: 'Mức tăng level cao nhất', en: 'Highest level gain' },
   opt_sr:         { vi: 'Ưu tiên Super Rare', en: 'Prefer Super Rare' },
   opt_leftmost:   { vi: 'Thẻ trái nhất', en: 'Leftmost card' },
+  lbl_smartevt:   { vi: 'Event: ưu tiên thưởng item free (Potential/Note)', en: 'Event: prefer free-item rewards (Potential/Note)' },
   grp_shop:       { vi: 'Chiến lược Shop', en: 'Shop strategy' },
   lbl_melody:     { vi: 'Chỉ mua Melody khi cần thiết', en: 'Buy Melody only when needed' },
   lbl_milestone:  { vi: 'Mốc enhance giữa run (coin)', en: 'Mid-run enhance cap (coin)' },
@@ -76,6 +77,15 @@ const I18N = {
   lbl_saverec:    { vi: 'Lưu Record cuối run', en: 'Save Record at end of run' },
   lbl_timeout:    { vi: 'Thời gian tối đa 1 run (giây)', en: 'Max run time (seconds)' },
   btn_save_asc:   { vi: 'Lưu cài đặt Ascension', en: 'Save Ascension settings' },
+  lbl_diff_asc:   { vi: 'Difficulty', en: 'Difficulty' },
+  opt_diff_auto:  { vi: 'Tự chọn bậc đã-clear cao nhất', en: 'Auto: highest cleared' },
+  lbl_skipcap:    { vi: 'Bỏ qua khi Weekly Limit đầy (3000/3000)', en: 'Skip when Weekly Limit is full (3000/3000)' },
+  hint_skipcap:   { vi: 'Đã đầy tuần thì run = 0 stub. Bỏ tick để vẫn chạy build sức mạnh Record (POWER).',
+                    en: 'Capped week = 0 stubs. Uncheck to still run for Record power (POWER).' },
+  lbl_objective:  { vi: 'Mục tiêu tối ưu', en: 'Optimization objective' },
+  opt_power:      { vi: 'POWER — Record mạnh (mặc định)', en: 'POWER — strong Record (default)' },
+  opt_score:      { vi: 'SCORE — farm stub (thử nghiệm)', en: 'SCORE — stub farm (experimental)' },
+  lbl_reserve_last: { vi: 'Coin dự trữ enhance (phòng cuối)', en: 'Enhance reserve (last room)' },
   // --- Bounty Trial settings ---
   grp_trial:      { vi: 'Loại Trial (map)', en: 'Trial type (map)' },
   lbl_trial:      { vi: 'Trial sẽ chạy', en: 'Trial to run' },
@@ -398,12 +408,17 @@ async function loadAscension() {
   const a = await pywebview.api.get_ascension();
   $('asc-map').value = a.map || '';
   $('asc-runs').value = a.runs_per_session;
+  $('asc-diff').value = a.difficulty;
+  $('asc-skipcap').checked = a.skip_when_capped;
   $('asc-squad').value = a.squad;
   $('asc-preset').value = a.preset_behavior;
   $('asc-card').value = a.card_priority;
+  $('asc-smartevt').checked = a.smart_event_choice;
+  $('asc-objective').value = a.objective;
   $('asc-melody').checked = a.buy_melody_when_needed_only;
   $('asc-milestone').value = a.enhance_milestone;
   $('asc-reserve').value = a.enhance_reserve;
+  $('asc-reserve-last').value = a.enhance_reserve_last_room;
   $('asc-refshelf').checked = a.refresh_shelf_last_room;
   $('asc-refcards').checked = a.refresh_cards_no_recommend;
   $('asc-brief').checked = a.brief_mode;
@@ -415,12 +430,17 @@ $('btn-save-asc').addEventListener('click', async () => {
   const r = await pywebview.api.save_ascension({
     map: $('asc-map').value,
     runs_per_session: parseInt($('asc-runs').value, 10) || 1,
+    difficulty: parseInt($('asc-diff').value, 10) || 0,
+    skip_when_capped: $('asc-skipcap').checked,
     squad: parseInt($('asc-squad').value, 10) || 0,
     preset_behavior: $('asc-preset').value,
     card_priority: $('asc-card').value,
+    smart_event_choice: $('asc-smartevt').checked,
+    objective: $('asc-objective').value,
     buy_melody_when_needed_only: $('asc-melody').checked,
     enhance_milestone: parseInt($('asc-milestone').value, 10) || 0,
     enhance_reserve: parseInt($('asc-reserve').value, 10) || 0,
+    enhance_reserve_last_room: parseInt($('asc-reserve-last').value, 10) || 0,
     refresh_shelf_last_room: $('asc-refshelf').checked,
     refresh_cards_no_recommend: $('asc-refcards').checked,
     brief_mode: $('asc-brief').checked,

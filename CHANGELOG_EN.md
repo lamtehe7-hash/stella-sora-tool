@@ -1,5 +1,33 @@
 # Changelog — Stella Sora Tool
 
+## v0.2.0 (2026-07-05) — pre-release — Ascension optimization
+
+Based on verified multi-source research (EN/JP/CN) of the Monolith/Ascension mechanics — see
+`docs/ascension-strategy.md`.
+
+### Ascension
+- **Auto-select the highest already-cleared Difficulty** (`ascension.difficulty`, default `0` = auto).
+  Rewards (stubs/coins/Record score) rise monotonically with difficulty, so keeping the game-remembered
+  tier can leave rewards behind. Auto only moves UP to a tier whose Quick Battle is lit (cleared); never
+  down or to an uncleared tier. Set `2..8` to force a specific tier.
+- **Smart Event / Choice Domain** (`smart_event_choice`, default ON): prefers the option granting a
+  **free item (Potential/Note)** over blindly tapping the bottom option — found via live-test: the old
+  logic took 🪙×30 instead of a Rare Potential. Detected via the coin icon on the reward tag (no coin =
+  free item). All-coin/gamble/Spend events still fall back to the safe bottom option (no regression).
+- **Skip when Weekly Limit is capped** (`skip_when_capped`, default ON): reads the N/3000 meter on the
+  Monolith page; when full (3000/3000) a run yields 0 stubs, so it skips to save a ticket. **Uncheck** to
+  still run for Record power (POWER).
+- **Last-room shop fix**: the final Portia room only used 1 of 2 shelf-refresh charges (the 360-coin
+  enhance reserve blocked the 2nd). Added `enhance_reserve_last_room` (=180) so both refresh charges get
+  used to surface SALE items (a 45–72 SALE potential is cheaper per level than a 180 enhance).
+- New objective switch `objective=power|score` (POWER default = validated behavior; SCORE experimental).
+- **GUI**: added Difficulty, POWER/SCORE objective, last-room enhance reserve, and the skip-when-capped /
+  smart-event checkboxes to the Ascension settings page.
+
+### Docs
+- README: added a note that the **emulator resolution must be 720×1280** (the tool does not auto-scale;
+  changing the resolution makes it error out). Resizing/zooming the MuMu **window** is harmless.
+
 ## v0.1.1 (2026-07-05) — pre-release
 
 ### Fixed

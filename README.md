@@ -27,6 +27,12 @@ Dành cho người dùng cuối — **không cần cài đặt gì ngoài giả 
 
 > `config/` và `log/` sẽ tự tạo cạnh `app.exe` khi chạy lần đầu. Không cần cài Python.
 
+> ⚠️ **Độ phân giải giả lập PHẢI là `720 × 1280` (bản dọc "điện thoại")** — game landscape sẽ ra
+> screenshot `1280 × 720`. Tool nhận diện bằng ảnh mẫu ở đúng độ phân giải này và **không tự co giãn**;
+> đặt sang độ phân giải khác (1080×1920, 1600×900, custom…) sẽ khiến tool báo lỗi và dừng.
+> Ngược lại, **kéo to/thu nhỏ hay zoom CỬA SỔ** MuMu trên desktop thì **vô hại** (adb chụp framebuffer
+> Android, độc lập với cửa sổ hiển thị) — cứ zoom thoải mái để nhìn.
+
 📖 Chi tiết từng task & tuỳ chọn cấu hình: **[CHANGELOG_VN.md](CHANGELOG_VN.md)**.
 
 ---

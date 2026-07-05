@@ -27,6 +27,13 @@ For end users — **nothing to install besides an emulator**:
 
 > `config/` and `log/` are created next to `app.exe` on first launch. No Python required.
 
+> ⚠️ **The emulator resolution MUST be `720 × 1280` (portrait "phone" profile)** — the game runs
+> landscape and produces a `1280 × 720` screenshot. The tool recognizes screens via templates cropped
+> at exactly this resolution and does **not** auto-scale; setting any other resolution (1080×1920,
+> 1600×900, custom…) makes the tool error out and stop. In contrast, **resizing or zooming the MuMu
+> WINDOW** on your desktop is **harmless** (adb captures the Android framebuffer, independent of the
+> display window) — zoom freely for visibility.
+
 📖 Full task list & config options: **[CHANGELOG_EN.md](CHANGELOG_EN.md)**.
 
 ---

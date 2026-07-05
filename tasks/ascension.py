@@ -15,6 +15,13 @@ from module.ui.pages import ASCENSION_TITLE, page_asc_diff, page_ascension
 # Quick Battle: tốn vé Monolith (badge x1 cạnh nút), CHỈ sáng khi difficulty đang chọn đã clear.
 # Game nhớ stage + difficulty + disc của lần chơi trước — tool giữ nguyên, không tự chọn.
 ASCENSION_QUICK_BATTLE = Button('ascension/ASCENSION_QUICK_BATTLE.png', area=(795, 615, 985, 690))
+# --- Chọn Difficulty (page_asc_diff): danh sách Difficulty 2..8 xếp dọc trái; pill ĐANG CHỌN màu
+# navy đậm (meanV~91), các pill khác trắng (meanV~224) — khảo sát go/05_difficulty2.png 2026-07-05.
+# Toạ độ tâm pill cố định (spacing ~72px). Quick Battle chỉ sáng khi bậc đó ĐÃ CLEAR + còn vé ->
+# dùng chính ASCENSION_QUICK_BATTLE làm tín hiệu "bậc này farm được". Không cần template ảnh riêng. ---
+DIFF_X = 160
+DIFF_Y = {2: 137, 3: 209, 4: 281, 5: 353, 6: 425, 7: 497, 8: 569}
+DIFF_PILL_DARK_V = 150  # pill đang chọn < mốc này (navy ~91); pill trắng ~224
 # --- Trang chọn Monolith (page_ascension): 4 map xếp dọc bên trái, map đang chọn có KHUNG GÓC
 # XANH LÁ ở dải trái (khảo sát 2026-07-05). Chọn map = tap nhãn; verify bằng khung xanh. Game nhớ
 # map lần trước — chỉ đụng khi config ascension.map != ''. ---
@@ -46,6 +53,9 @@ ASCENSION_RECOMMEND = Button('ascension/ASCENSION_RECOMMEND.png', area=(280, 120
 ASCENSION_SELECT = Button('ascension/ASCENSION_SELECT.png', area=(150, 560, 1150, 650),
                           threshold=0.75)  # nút có animation nhấp nháy, score tụt tới ~0.78
 ASCENSION_EVENT_CHOICE = Button('ascension/ASCENSION_EVENT_CHOICE.png')  # icon chat trong option
+# Tag thưởng ở đáy-phải mỗi option: có icon coin (đĩa vàng) = liên quan coin (nhận/tốn coin);
+# KHÔNG có icon coin = phần thưởng ITEM free (Potential/Note) -> ưu tiên POWER. Ngưỡng pixel vàng.
+EVENT_TAG_COIN_MIN = 20
 ASCENSION_CONTINUE = Button('ascension/ASCENSION_CONTINUE.png')
 # Icon 📍 teal góc phải hộp thoại NPC — nhận diện hội thoại để tap vượt ngay
 DIALOG_PIN = Button('ascension/DIALOG_PIN.png', area=(990, 625, 1055, 678))
@@ -60,7 +70,10 @@ NETWORK_RETRY_RUN = Button('common/NETWORK_RETRY.png', area=(657, 463, 910, 553)
 SHOP_PURCHASE = Button('ascension/SHOP_PURCHASE.png', area=(370, 240, 920, 570), threshold=0.75)
 SHOP_ENHANCE = Button('ascension/SHOP_ENHANCE.png', area=(370, 240, 920, 570), threshold=0.75)
 # Trong shop UI: 2 kệ x 4 slot (trên: Potential Drink = +1 thẻ/level, dưới: Melody x5 note);
-# slot mua xong thành Sold Out (tag tối, giá hết màu navy); refresh kệ (100 coin, 2 lượt).
+# slot mua xong thành Sold Out (tag tối, giá hết màu navy); refresh kệ 100 coin.
+# ⚠️ Số lượt refresh là NGÂN SÁCH CẢ RUN (gated node Research 倉庫の鍵: Lab2=1, Lab3=2 lượt),
+# KHÔNG phải 2/phòng. EV tối ưu = dồn hết vào phòng CUỐI (coin mất trắng khi rời -> opportunity
+# cost ~0); phòng đầu/giữa opportunity cost cao nên không refresh. Xem docs/ascension-strategy.md §3.
 SHOP_SHELF = Button('ascension/SHOP_SHELF.png', area=(560, 230, 680, 330))     # tag penguin kệ trên
 SHOP_DIALOG = Button('ascension/SHOP_DIALOG.png', area=(280, 150, 520, 230))   # header dialog Purchase
 SHOP_NOTES = Button('ascension/SHOP_NOTES.png', area=(430, 20, 860, 80))       # "Musical Notes Acquired!"
@@ -112,7 +125,8 @@ ENHANCE_STEP = 60                    # thang giá enhance mỗi phòng: (Free ->
 ENHANCE_MILESTONE = 180              # giữa run enhance tới hết bậc này rồi dừng, giữ coin
 ENHANCE_RESERVE = 360                # coin phải chừa khi mua sắm = 60 + 120 + 180
 CARD_REFRESH_COST = 40               # refresh bộ thẻ ở màn chọn thẻ
-SHOP_REFRESH_COST = 100              # refresh kệ shop (tối đa 2 lượt/phòng)
+SHOP_REFRESH_COST = 100              # refresh kệ shop; tối đa 2 lượt/RUN (research-gated Lab2=1/Lab3=2),
+#                                      dồn hết vào phòng cuối (EV cao nhất — xem docs §3)
 SHOP_MIN_PRICE = 45                  # giá rẻ nhất từng thấy — mốc "vẫn còn mua được gì đó"
 
 # --- Đọc level trên thẻ (màn chọn/nâng thẻ) ---
@@ -451,6 +465,69 @@ def _map_is_selected(img, y_center: int) -> bool:
     return c is not None and abs(c - y_center) < 40
 
 
+# --- Weekly Limit "N/3000" trên page_ascension (đáy, cạnh nhãn "Weekly Limit"). Khảo sát
+# 2026-07-05: số navy trên nền sáng, font khác coin -> KHÔNG OCR giá trị mà so KHỐI SỐ trái (N)
+# với khối phải (max): capped <=> hai khối giống hệt (số runs LẺ + từng cặp glyph khớp). ---
+WEEKLY_ROI = (496, 636, 618, 662)
+
+
+def weekly_is_capped(img):
+    """True nếu Weekly Limit đã đầy (N == max, vd 3000/3000) trên page_ascension. False nếu chưa;
+    None nếu không đọc được (sai trang / layout lạ). So khối số trái-phải, không cần đọc giá trị."""
+    x1, y1, x2, y2 = WEEKLY_ROI
+    runs = _digit_runs(_price_mask(img[y1:y2, x1:x2]), min_h=10, max_h=22, min_w=3)
+    runs = [r for r in runs if 3 <= r[1] - r[0] <= 14]   # bỏ blob rác rộng (nhãn/viền)
+    n = len(runs)
+    if n < 3:
+        return None
+    if n % 2 == 0:
+        return False                      # số chữ số 2 vế khác nhau -> N != max -> chưa capped
+    k = n // 2                            # dấu '/' ở giữa khi 2 vế cùng số chữ số
+    for (_, _, cl), (_, _, cr) in zip(runs[:k], runs[k + 1:]):
+        a = cv2.resize((cl * 255).astype(np.uint8), (10, 16)).astype(np.int16)
+        b = cv2.resize((cr * 255).astype(np.uint8), (10, 16)).astype(np.int16)
+        if 1 - np.abs(a - b).mean() / 255 < 0.82:
+            return False
+    return True
+
+
+def event_options(img) -> list:
+    """Các option của event NPC = icon chat ASCENSION_EVENT_CHOICE, gộp theo hàng, TRÊN -> DƯỚI.
+    Trả [(x_click, y_center)] — x_click lệch phải khỏi icon để bấm giữa dòng option."""
+    tpl = ASCENSION_EVENT_CHOICE.template
+    r = cv2.matchTemplate(img, tpl, cv2.TM_CCOEFF_NORMED)
+    ys, xs = np.where(r >= ASCENSION_EVENT_CHOICE.threshold)
+    rows = []
+    for y, x in sorted(zip(ys.tolist(), xs.tolist())):
+        cy = y + tpl.shape[0] // 2
+        if not rows or cy - rows[-1][1] > 40:
+            rows.append((x + 240, cy))
+    return rows
+
+
+def event_tag_has_coin(img, cy: int) -> bool:
+    """True nếu tag thưởng của option (icon chat tâm y=cy) có icon coin (đĩa vàng) — tức phần thưởng
+    liên quan coin (nhận/tốn coin). False = tag không coin = phần thưởng item free (Potential/Note)."""
+    tag = img[cy + 18:cy + 54, 840:1252]
+    if tag.size == 0:
+        return True
+    b, g, r = [tag[:, :, i].astype(int) for i in range(3)]
+    yellow = int(((r > 150) & (g > 110) & (b < 110) & (r - b > 60)).sum())
+    return yellow >= EVENT_TAG_COIN_MIN
+
+
+def read_selected_difficulty(img):
+    """Bậc Difficulty đang chọn trên page_asc_diff = pill navy đậm (các pill khác trắng).
+    None nếu layout không khớp (không ở đúng trang) — yêu cầu ĐÚNG 1 pill tối + phần còn lại
+    sáng như pill trắng, để không nhận nhầm trên màn khác."""
+    vals = {d: float(img[y - 14:y + 14, DIFF_X - 45:DIFF_X + 55].mean()) for d, y in DIFF_Y.items()}
+    d_sel = min(vals, key=vals.get)
+    others = sorted(v for d, v in vals.items() if d != d_sel)
+    if vals[d_sel] < DIFF_PILL_DARK_V and others[len(others) // 2] > 190:
+        return d_sel
+    return None
+
+
 def _gain(lv, priority: str = 'level_gain') -> int:
     """Lợi tức chọn thẻ theo tiêu chí người chơi:
     - level_gain: Super Rare (không level, core build) = 99 (ưu tiên tuyệt đối); thẻ mới "Lv. N" = N;
@@ -486,16 +563,20 @@ def pick_card(img, recs: list, priority: str = 'level_gain') -> tuple:
 class Ascension(UI):
     """Chạy 1 run Monolith/ngày bằng Quick Battle, chọn thẻ theo Potential Preset của người chơi.
 
+    Chiến lược đầy đủ + cơ chế đã verify đa nguồn: xem docs/ascension-strategy.md.
+
     Cách game vận hành (khảo sát + wiki + guide cộng đồng):
+    - Difficulty: phần thưởng tăng đơn điệu theo bậc (Diff7≈430 stub/clear). cfg.difficulty=0 ->
+      tự nâng lên bậc đã-clear cao nhất (Quick Battle sáng = bậc farm được); 2..8 -> ép bậc đó.
     - Preset Potential tự áp theo squad trùng thành viên; thẻ thuộc preset hiện ribbon 👍 ở màn
       chọn thẻ. Nhiều thẻ 👍 -> chọn thẻ có MỨC TĂNG LEVEL lớn nhất (đọc thanh "Lv. A ▶ B"/"Lv. N");
       thẻ 👍 không có thanh level = Super Rare core -> ưu tiên tuyệt đối. Hoà -> thẻ trái nhất.
     - Phòng Shop (1-6, 2-9, 3-8, phòng cuối): mua theo chiến lược — ưu tiên hàng SALE, Drink
       mua tự do, Melody CHỈ mua khi "cần thiết" (dialog mua hiện panel Relevant Harmony Skills
-      = note được skill của disc dùng); luôn chừa 360 coin để Enhance đủ Free+60+120+180.
-      Enhance mỗi phòng dừng ở mốc 180 để dành coin cho shop sau; PHÒNG CUỐI vét sạch:
-      mua -> refresh kệ (100 coin, ≤2 lượt) -> enhance tới hết -> mua vét lần chót
-      (Starcoin mất trắng khi rời Monolith).
+      = note được skill của disc dùng); luôn chừa 360 coin để Enhance đủ Free+60+120+180 (quy tắc
+      ROI: chỉ enhance khi 1 lượt ≤200 coin). Enhance mỗi phòng dừng ở mốc 180 để dành coin cho
+      shop sau; PHÒNG CUỐI (coin mất trắng khi rời) ưu tiên giá trị lâu dài: mua -> enhance tới mốc
+      180 -> VÉT kệ note/thẻ + refresh (100 coin, ≤2 lượt) -> chỉ khi còn dư mới enhance nốt tới hết.
     - Màn chọn thẻ không có thẻ 👍 nào -> refresh bộ thẻ 1 lần (40 coin, nếu màn đó có nút);
       vẫn không có 👍 thì lấy thẻ đang focus như cũ.
     - Người chơi cần chơi tay 1 lần trước: clear difficulty muốn farm, lưu preset trùng squad,
@@ -504,13 +585,25 @@ class Ascension(UI):
 
     def run(self) -> None:
         self.cfg = self.config.ascension
+        if self.cfg.objective == 'score':
+            logger.warning("Ascension: objective='score' chưa được implement — chạy như 'power' "
+                           '(xem docs/ascension-strategy.md §4, §8)')
+        # Ghé page_ascension (trên đường tới asc_diff) để đọc Weekly Limit + (tuỳ config) chọn map.
+        self.ui_ensure(page_ascension)
+        if self.cfg.skip_when_capped:
+            if weekly_is_capped(self.device.screenshot()):
+                logger.info('Ascension: Weekly Limit đã đầy (N/3000) — run bây giờ = 0 stub, bỏ qua '
+                            'để khỏi phí vé. Bỏ tick skip_when_capped nếu muốn chạy để build POWER.')
+                self.config.task_delay('Ascension', server_reset=True)
+                return
         if self.cfg.map:
-            self.ui_ensure(page_ascension)
             self._select_map(self.cfg.map)   # loop bên dưới sẽ đi tiếp ascension -> asc_diff
         runs = max(1, self.cfg.runs_per_session)
         done = 0
-        for _ in range(runs):
+        for i in range(runs):
             self.ui_ensure(page_asc_diff)
+            if i == 0:
+                self._select_difficulty()   # chọn 1 lần/session (game nhớ cho các run sau)
             self.device.screenshot()
             if not self.appear(ASCENSION_QUICK_BATTLE):
                 if done == 0:
@@ -551,6 +644,57 @@ class Ascension(UI):
             time.sleep(1.3)
         logger.warning(f'Ascension: chọn map "{key}" — không xác nhận được khung chọn, vẫn đi tiếp')
         return False
+
+    def _tap_difficulty(self, d: int) -> None:
+        self.device.click_xy(DIFF_X, DIFF_Y[d], name=f'ASC_DIFF_{d}')
+        time.sleep(1.2)
+
+    def _select_difficulty(self) -> None:
+        """Chọn Difficulty trên page_asc_diff theo cfg.difficulty.
+        - N in 2..8: ép bậc N (chỉ hữu ích nếu Quick Battle bậc đó sáng).
+        - 0 (auto): TỪ bậc đang chọn quét LÊN, dừng ở bậc đã-clear cao nhất (Quick Battle còn sáng).
+          Chỉ đi lên nên không bao giờ tự hạ xuống bậc thấp hơn / bậc chưa clear."""
+        img = self.device.screenshot()
+        cur = read_selected_difficulty(img)
+        target = self.cfg.difficulty
+        if target in DIFF_Y:                      # ép bậc cụ thể
+            if cur != target:
+                self._tap_difficulty(target)
+            self.device.screenshot()
+            if self.appear(ASCENSION_QUICK_BATTLE):
+                logger.info(f'Ascension: đã chọn Difficulty {target}')
+            else:
+                logger.warning(f'Ascension: Difficulty {target} Quick Battle KHÔNG sáng '
+                               '(chưa clear / hết vé) — vẫn giữ lựa chọn này')
+            return
+        if cur is None:
+            logger.info('Ascension: không đọc được Difficulty đang chọn — giữ nguyên bậc game nhớ')
+            return
+        # auto: quét lên tìm bậc đã-clear cao nhất (Quick Battle còn sáng)
+        best = cur
+        probe = cur + 1
+        while probe <= 8:
+            self._tap_difficulty(probe)
+            self.device.screenshot()
+            if self.appear(ASCENSION_QUICK_BATTLE):
+                best = probe
+                probe += 1
+            else:
+                break                             # bậc này chưa clear -> dừng, best là bậc cao nhất
+        if read_selected_difficulty(self.device.image) != best:
+            self._tap_difficulty(best)            # đang đứng ở bậc chưa clear -> quay về best
+            self.device.screenshot()
+        # Guard: xác nhận best thực sự sáng Quick Battle; nếu không (đọc nhầm do timing) quay về
+        # bậc game nhớ (đã biết farm được) để không skip cả ngày vì kẹt ở bậc chưa clear.
+        if best != cur and not self.appear(ASCENSION_QUICK_BATTLE):
+            logger.warning(f'Ascension: Difficulty {best} không xác nhận Quick Battle sáng — '
+                           f'quay về Difficulty {cur}')
+            self._tap_difficulty(cur)
+            best = cur
+        if best != cur:
+            logger.info(f'Ascension: tự nâng Difficulty {cur} -> {best} (bậc đã-clear cao nhất)')
+        else:
+            logger.info(f'Ascension: giữ Difficulty {cur} (không có bậc cao hơn đã clear)')
 
     def _enter_run(self):
         """Quick Battle -> màn Squad (chọn squad nếu cấu hình + kiểm tra Preset) -> Disc -> Start.
@@ -802,18 +946,23 @@ class Ascension(UI):
     # --- shop (Trade Domain) --------------------------------------------------
 
     def _do_shop_room(self, last_room: bool) -> None:
-        """Phòng shop trọn gói: mua theo chiến lược (chừa 360 coin enhance) -> Enhance theo
-        thang giá -> phòng cuối thì quay lại vét coin còn thừa (mua bất chấp cần thiết)."""
+        """Phòng shop trọn gói. Giữa run: mua (chừa 360 coin) -> Enhance tới mốc 180 (giữ coin cho
+        shop sau). PHÒNG CUỐI (coin mất trắng khi rời): ưu tiên GIÁ TRỊ LÂU DÀI hơn enhance bậc cao
+        ROI kém — mua chừa 360 -> enhance tới mốc 180 -> VÉT sạch kệ (note/thẻ, refresh) -> chỉ khi
+        còn dư mới enhance nốt tới hết (note 15đ Record lời hơn enhance bậc 540/740). Xem
+        docs/ascension-strategy.md §5."""
         self._shop_refreshes = 0
         self._do_shop(last_room=last_room)
-        self._do_enhance(last_room=last_room)
+        self._do_enhance(last_room=last_room, until_broke=False)   # dừng ở mốc 180 (cả phòng cuối)
         if not last_room:
             return
         img = self.device.screenshot()
         coins = read_coins(img)
         if coins is not None and coins >= SHOP_MIN_PRICE and self.appear(SHOP_PURCHASE):
-            logger.info(f'Ascension: phòng cuối còn {coins} coin — quay lại shop vét nốt')
+            logger.info(f'Ascension: phòng cuối còn {coins} coin — vét note/thẻ + refresh kệ trước')
             self._do_shop(last_room=True, burn=True)
+        # Còn dư sau khi vét sạch kệ -> enhance nốt (coin sẽ mất khi rời Monolith)
+        self._do_enhance(last_room=True, until_broke=True)
 
     def _do_shop(self, last_room: bool, burn: bool = False) -> None:
         """Từ màn options shop: mở shop UI, mua theo thứ tự SALE trước rồi giá rẻ trước.
@@ -828,7 +977,14 @@ class Ascension(UI):
         logger.info(f'Ascension: phòng Shop — mua sắm ({mode})')
         self.device.click_xy(640, SHOP_PURCHASE.last_match[1], name='ASC_SHOP_OPEN')
         time.sleep(3)
-        reserve = 0 if burn else self.cfg.enhance_reserve
+        # Reserve = coin chừa lại khi mua/refresh (đảm bảo đủ enhance sau đó).
+        # - burn (vét cuối): 0.
+        # - giữa run: enhance_reserve (360 = Free+60+120+180) — vì phòng sau còn cần enhance.
+        # - PHÒNG CUỐI: chỉ chừa cho 2 bậc enhance RẺ nhất (60+120=180) thay vì 360, để CẢ 2 refresh
+        #   charge đều được dùng (surface SALE) + mua thêm SALE. Bậc enhance 180 (biên, ROI kém hơn 1
+        #   SALE potential 45-72) nhường chỗ cho refresh+SALE. Xem docs/ascension-strategy.md §3.
+        reserve = 0 if burn else (self.cfg.enhance_reserve_last_room if last_room
+                                  else self.cfg.enhance_reserve)
         while True:
             if not self._shop_settle():
                 logger.warning('Ascension: lạc khỏi shop UI — dừng mua')
@@ -939,12 +1095,15 @@ class Ascension(UI):
         except Exception:
             pass
 
-    def _do_enhance(self, last_room: bool) -> None:
+    def _do_enhance(self, last_room: bool, until_broke: bool = False) -> None:
         """Enhance theo GIÁ ĐỌC TỪ DÒNG OPTION "Enhance (Free|60|... 🪙)" (phòng thường
         Free -> 60 -> 120 -> 180...; PHÒNG CUỐI không có bậc Free — run 2026-07-05). Mỗi lần
-        enhance mở màn chọn 1-trong-3 thẻ (xử lý qua _settle_to_options). Giữa run dừng sau
-        mốc 180 để dành coin cho shop sau; phòng cuối bấm tới khi hết tiền. Guard: số dư
-        không đổi 2 nhịp liên tiếp khi bậc trả phí -> dừng."""
+        enhance mở màn chọn 1-trong-3 thẻ (xử lý qua _settle_to_options).
+        - until_broke=False (mặc định): dừng sau mốc enhance_milestone (180). Quy tắc ROI cộng đồng:
+          chỉ enhance khi 1 lượt ≤200 coin (dưới 200 lời hơn mua potential 200) = Free+60+120+180.
+        - until_broke=True (chỉ phòng cuối, SAU khi đã vét kệ): bấm tới khi hết tiền — coin dư sẽ
+          mất trắng khi rời Monolith nên đổ nốt vào enhance.
+        Guard: số dư không đổi 2 nhịp liên tiếp khi bậc trả phí -> dừng."""
         step, prev_coins, same, expect, last_cost = 0, None, 0, None, None
         while True:
             img = self.device.screenshot()
@@ -967,9 +1126,9 @@ class Ascension(UI):
                 # nên vẫn vượt mốc -> dừng sạch giữa run; đầu run coi như 60)
                 cost = (last_cost + ENHANCE_STEP) if last_cost is not None else ENHANCE_STEP
                 logger.warning(f'Ascension: không đọc được giá enhance — ước tính {cost}')
-            if not last_room and cost > self.cfg.enhance_milestone:
+            if not until_broke and cost > self.cfg.enhance_milestone:
                 logger.info(f'Ascension: enhance đã tới mốc {self.cfg.enhance_milestone} '
-                            f'— giữ coin cho shop sau')
+                            f'— dừng ({"giữ coin cho shop sau" if not last_room else "ưu tiên vét kệ"})')
                 return
             coins = read_coins(img)
             if coins is None and cost > 0:
@@ -1054,17 +1213,24 @@ class Ascension(UI):
     # --- event / nhận diện chung ----------------------------------------------
 
     def _handle_event_choice(self, img, suffix: int) -> tuple | None:
-        """Sự kiện NPC nhiều lựa chọn: bấm option chat DƯỚI CÙNG (an toàn — thường là rời đi/
-        từ chối). Trả về (x, y) đã bấm để vòng ngoài phát hiện bấm mãi không đổi màn."""
-        tpl = ASCENSION_EVENT_CHOICE.template
-        r = cv2.matchTemplate(img, tpl, cv2.TM_CCOEFF_NORMED)
-        ys, xs = np.where(r >= ASCENSION_EVENT_CHOICE.threshold)
-        if len(ys) == 0:
+        """Sự kiện NPC nhiều lựa chọn. smart_event_choice=True: ưu tiên option cho phần thưởng ITEM
+        free (Potential/Note — tag KHÔNG có icon coin) thay vì mù bấm dưới cùng (phát hiện live-test:
+        tool cũ lấy 30 coin thay vì Rare Potential). Không có option item-free / tắt config -> bấm
+        option DƯỚI CÙNG (an toàn, thường là rời/từ chối). Trả (x, y) đã bấm."""
+        opts = event_options(img)
+        if not opts:
             return None
-        y = int(ys.max()) + tpl.shape[0] // 2
-        x = int(xs[ys.argmax()]) + 240  # click giữa dòng option, lệch phải khỏi icon
-        self.device.click_xy(x, y, name=f'ASC_EVT_{suffix}')
-        return (x, y)
+        target, why = None, ''
+        if getattr(self.cfg, 'smart_event_choice', True) and len(opts) >= 2:
+            for cx, cy in opts:                       # trên -> dưới: item-free đầu tiên
+                if not event_tag_has_coin(img, cy):
+                    target, why = (cx, cy), 'thưởng item free (tag không coin)'
+                    break
+        if target is None:
+            target, why = opts[-1], 'option dưới cùng (mặc định an toàn)'
+        self.device.click_xy(*target, name=f'ASC_EVT_{suffix}')
+        logger.info(f'Ascension: event {len(opts)} option -> y={target[1]} ({why})')
+        return target
 
     def _recommend_xs(self, img) -> list:
         """Toạ độ x các ribbon 👍 Recommended (gộp cụm >60px), trái -> phải."""

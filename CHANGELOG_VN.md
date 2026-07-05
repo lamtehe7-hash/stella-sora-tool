@@ -1,5 +1,39 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.2.0 (2026-07-05) — pre-release — tối ưu Ascension
+
+Dựa trên nghiên cứu cơ chế Monolith/Ascension đa nguồn (EN/JP/CN) đã verify — chi tiết ở
+`docs/ascension-strategy.md`.
+
+### Tài liệu
+- README: thêm ghi chú **độ phân giải giả lập phải là 720×1280** (tool không tự co giãn; đổi resolution
+  sẽ báo lỗi). Kéo/zoom **cửa sổ** MuMu thì vô hại.
+
+### Ascension
+- **Tự chọn Difficulty cao nhất đã clear** (`ascension.difficulty`, mặc định `0`=auto). Phần thưởng
+  (stub/coin/điểm Record) tăng đơn điệu theo bậc, nên giữ bậc game nhớ có thể bỏ lỡ thưởng. Auto CHỈ
+  nâng lên bậc còn Quick Battle sáng (đã clear), không bao giờ tự hạ hay chọn bậc chưa clear. Đặt
+  `2..8` để ép bậc cụ thể.
+- **Phòng cuối ưu tiên giá trị lâu dài**: trước đây enhance tới hết tiền rồi mới vét kệ; giờ mua +
+  enhance tới mốc 180 → **vét note/thẻ + refresh kệ trước** → chỉ khi còn dư mới enhance nốt (note =
+  15đ Record, lời hơn enhance bậc 540/740 ROI kém). Coin luôn tiêu về ~0 vì mất trắng khi rời Monolith.
+- **Sửa phòng cuối chỉ dùng 1/2 lượt refresh kệ** (phát hiện qua live-test run thật): `enhance_reserve=360`
+  chặn lượt refresh thứ 2 rồi dồn hết vào enhance. Thêm `enhance_reserve_last_room=180` — phòng cuối chỉ
+  chừa cho 2 bậc enhance rẻ nhất (60+120), giải phóng budget để **cả 2 refresh charge đều được dùng**
+  (refresh surface hàng SALE; 1 SALE potential 45–72 coin rẻ/level hơn enhance bậc 180).
+- **Event/Choice Domain thông minh** (`smart_event_choice`, mặc định BẬT): ưu tiên option cho phần thưởng
+  **item free (Potential/Note)** thay vì mù bấm option dưới cùng — phát hiện qua live-test: tool cũ lấy 🪙×30
+  thay vì Rare Potential. Nhận diện bằng icon coin trên tag thưởng (không coin = item free). Event toàn coin/
+  gamble/Spend -> vẫn về option dưới cùng an toàn (không regression). Bỏ tick để về hành vi cũ.
+- **Bỏ qua khi Weekly Limit đầy** (`skip_when_capped`, mặc định BẬT): đọc meter N/3000 trên trang Monolith;
+  đầy 3000/3000 thì run = 0 stub nên tự bỏ qua khỏi phí vé. **Bỏ tick** nếu vẫn muốn chạy build Record (POWER).
+- **GUI**: thêm ô chọn Difficulty, mục tiêu POWER/SCORE, dự trữ enhance phòng cuối, và 2 checkbox trên
+  (skip-when-capped, smart-event) vào trang cài đặt Ascension.
+- **Đã live-test (run Storm/Diff8/Squad6, 2026-07-05):** auto-Difficulty (giữ 8 đúng), điều hướng Squad 6,
+  card-pick, shop SALE-first, enhance milestone, Save Record — tất cả chạy đúng end-to-end.
+- Thêm `ascension.objective` (`power` mặc định / `score` thử nghiệm — hiện chạy như `power` + cảnh báo;
+  cần test live trước khi bật, xem docs §8). Ghi chú: **không** dùng `map='misstep'` để farm (tháp tập sự).
+
 ## v0.1.1 (2026-07-05) — pre-release
 
 ### Sửa lỗi

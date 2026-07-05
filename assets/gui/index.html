@@ -119,7 +119,21 @@
           <div class="card-head"><span class="card-title" data-i18n="grp_runs">Vé &amp; số lần chạy</span></div>
           <label class="set-row"><span data-i18n="lbl_runs">Số run mỗi lần (mỗi run 1 vé)</span>
             <input id="asc-runs" type="number" min="1" max="50"></label>
+          <label class="set-row"><span data-i18n="lbl_diff_asc">Difficulty</span>
+            <select id="asc-diff">
+              <option value="0" data-i18n="opt_diff_auto">Tự chọn bậc đã-clear cao nhất</option>
+              <option value="2">Difficulty 2</option>
+              <option value="3">Difficulty 3</option>
+              <option value="4">Difficulty 4</option>
+              <option value="5">Difficulty 5</option>
+              <option value="6">Difficulty 6</option>
+              <option value="7">Difficulty 7</option>
+              <option value="8">Difficulty 8</option>
+            </select></label>
+          <label class="check-row"><input id="asc-skipcap" type="checkbox">
+            <span data-i18n="lbl_skipcap">Bỏ qua khi Weekly Limit đầy (3000/3000)</span></label>
           <p class="hint" data-i18n="hint_runs">Hết vé Quick Battle thì tự dừng sớm.</p>
+          <p class="hint" data-i18n="hint_skipcap">Đã đầy tuần thì run = 0 stub. Bỏ tick để vẫn chạy build sức mạnh Record (POWER).</p>
         </section>
 
         <section class="card settings-group">
@@ -147,16 +161,25 @@
               <option value="super_rare" data-i18n="opt_sr">Ưu tiên Super Rare</option>
               <option value="leftmost" data-i18n="opt_leftmost">Thẻ trái nhất</option>
             </select></label>
+          <label class="check-row"><input id="asc-smartevt" type="checkbox">
+            <span data-i18n="lbl_smartevt">Event: ưu tiên thưởng item free (Potential/Note)</span></label>
         </section>
 
         <section class="card settings-group">
           <div class="card-head"><span class="card-title" data-i18n="grp_shop">Chiến lược Shop</span></div>
+          <label class="set-row"><span data-i18n="lbl_objective">Mục tiêu tối ưu</span>
+            <select id="asc-objective">
+              <option value="power" data-i18n="opt_power">POWER — Record mạnh (mặc định)</option>
+              <option value="score" data-i18n="opt_score">SCORE — farm stub (thử nghiệm)</option>
+            </select></label>
           <label class="check-row"><input id="asc-melody" type="checkbox">
             <span data-i18n="lbl_melody">Chỉ mua Melody khi cần thiết</span></label>
           <label class="set-row"><span data-i18n="lbl_milestone">Mốc enhance giữa run (coin)</span>
             <input id="asc-milestone" type="number" min="0" max="2000"></label>
-          <label class="set-row"><span data-i18n="lbl_reserve">Coin dự trữ để enhance</span>
+          <label class="set-row"><span data-i18n="lbl_reserve">Coin dự trữ để enhance (giữa run)</span>
             <input id="asc-reserve" type="number" min="0" max="2000"></label>
+          <label class="set-row"><span data-i18n="lbl_reserve_last">Coin dự trữ enhance (phòng cuối)</span>
+            <input id="asc-reserve-last" type="number" min="0" max="2000"></label>
           <label class="check-row"><input id="asc-refshelf" type="checkbox">
             <span data-i18n="lbl_refshelf">Refresh kệ ở phòng cuối</span></label>
           <label class="check-row"><input id="asc-refcards" type="checkbox">
