@@ -5,6 +5,7 @@ import numpy as np
 
 from module.config import ROOT
 from module.exception import AssetMissingError
+from module.logger import logger
 
 _SERVER = 'en'
 
@@ -26,6 +27,7 @@ class Button:
         self.threshold = threshold
         self.name = name or Path(file).stem
         self._template = None
+        self._size_warned = False
         self.last_match: tuple | None = None  # (x, y) tâm vùng khớp gần nhất
 
     @property
@@ -51,6 +53,15 @@ class Button:
         if self.area is not None:
             x1, y1, x2, y2 = self.area
             crop = image[y1:y2, x1:x2]
+        th, tw = self.template.shape[:2]
+        ch, cw = crop.shape[:2]
+        if th > ch or tw > cw:
+            # Template lớn hơn vùng tìm -> matchTemplate sẽ ném assertion. Không thể khớp -> bỏ qua.
+            if not self._size_warned:
+                logger.warning(f'{self.name}: template {tw}x{th} lớn hơn vùng tìm {cw}x{ch} — '
+                               f'bỏ qua match (kiểm tra area/asset)')
+                self._size_warned = True
+            return False
         res = cv2.matchTemplate(crop, self.template, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(res)
         if max_val < threshold:
