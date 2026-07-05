@@ -1,5 +1,14 @@
 # Changelog — Stella Sora Tool
 
+## v0.1.1 (2026-07-05) — pre-release
+
+### Fixed
+- **Cleanup crash** (`matchTemplate` assertion). OpenCV threw `(-215) _img <= _templ` whenever a
+  template was larger than its search area — this happened during `ui_current_page` and aborted the
+  Cleanup task. Fix: widened the `GRANT_CHECK` search area to fit its template, and hardened
+  `Button.match` to skip (with a one-time warning) instead of crashing when a template exceeds its
+  search region, so a single mis-cropped asset can no longer break page detection.
+
 ## v0.1.0 (2026-07-05) — pre-release
 
 First release. A tool that **automates the daily routine** for **Stella Sora (EN server)** running on an Android emulator. Portable Windows 64-bit build — **no Python installation required**.

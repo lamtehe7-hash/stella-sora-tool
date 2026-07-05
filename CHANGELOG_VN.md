@@ -1,5 +1,13 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.1.1 (2026-07-05) — pre-release
+
+### Sửa lỗi
+- **Cleanup crash** (assertion `matchTemplate`). OpenCV ném `(-215) _img <= _templ` mỗi khi template
+  lớn hơn vùng tìm — xảy ra trong `ui_current_page` và làm dừng task Cleanup. Đã sửa: nới vùng `area`
+  của `GRANT_CHECK` cho vừa template, và gia cố `Button.match` — bỏ qua (kèm cảnh báo 1 lần) thay vì
+  crash khi template lớn hơn vùng tìm, để một asset crop lệch không còn làm hỏng nhận diện page.
+
 ## v0.1.0 (2026-07-05) — pre-release
 
 Bản phát hành đầu tiên. Công cụ **tự động hoá công việc hằng ngày (daily)** cho game **Stella Sora (bản EN)** chạy trên giả lập Android. Bản đóng gói portable cho Windows 64-bit — **không cần cài Python**.
