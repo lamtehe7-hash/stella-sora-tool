@@ -9,16 +9,32 @@ from module.config import ROOT
 from module.exception import TaskError
 from module.logger import logger
 from module.ui.page import UI
-from module.ui.pages import ASCENSION_TITLE, page_asc_diff
+from module.ui.pages import ASCENSION_TITLE, page_asc_diff, page_ascension
 
 # --- Trang difficulty (khảo sát 2026-07-04 đêm) ---
 # Quick Battle: tốn vé Monolith (badge x1 cạnh nút), CHỈ sáng khi difficulty đang chọn đã clear.
 # Game nhớ stage + difficulty + disc của lần chơi trước — tool giữ nguyên, không tự chọn.
 ASCENSION_QUICK_BATTLE = Button('ascension/ASCENSION_QUICK_BATTLE.png', area=(795, 615, 985, 690))
+# --- Trang chọn Monolith (page_ascension): 4 map xếp dọc bên trái, map đang chọn có KHUNG GÓC
+# XANH LÁ ở dải trái (khảo sát 2026-07-05). Chọn map = tap nhãn; verify bằng khung xanh. Game nhớ
+# map lần trước — chỉ đụng khi config ascension.map != ''. ---
+MAP_CURRENTS = Button('ascension/MAP_CURRENTS.png', area=(285, 70, 610, 590), threshold=0.85)
+MAP_DUST = Button('ascension/MAP_DUST.png', area=(285, 70, 610, 590), threshold=0.85)
+MAP_STORM = Button('ascension/MAP_STORM.png', area=(285, 70, 610, 590), threshold=0.85)
+MAP_MISSTEP = Button('ascension/MAP_MISSTEP.png', area=(285, 70, 610, 590), threshold=0.85)
+MAP_LABELS = {'currents': MAP_CURRENTS, 'dust': MAP_DUST, 'storm': MAP_STORM, 'misstep': MAP_MISSTEP}
 # --- Màn chọn squad: preset Potential tự áp theo thành viên squad ("Currently applied.") ---
 SQUAD_TITLE = Button('ascension/SQUAD_TITLE.png', area=(105, 8, 255, 80))
 SQUAD_NEXT = Button('ascension/SQUAD_NEXT.png', area=(1070, 635, 1255, 700))
 SQUAD_PRESET_SET = Button('ascension/SQUAD_PRESET_SET.png', area=(1080, 72, 1260, 120))
+# Cảnh báo "Preset not set." (navy, chữ trắng, KHÔNG icon kính lúp) — hiện khi squad chưa gắn
+# Potential Preset. Khác pill "Preset set." nên bắt riêng để quyết định skip/abort/warn.
+SQUAD_PRESET_NOT_SET = Button('ascension/SQUAD_PRESET_NOT_SET.png', area=(1080, 78, 1265, 118),
+                              threshold=0.85)
+# Mũi tên đổi squad (khảo sát 2026-07-05): trái = squad -1, phải = squad +1, CẢ HAI wrap vòng
+# (squad 1 <-vuốt trái- squad N). Hàng dot dưới tiêu đề cho biết squad hiện tại + tổng số squad.
+SQUAD_LEFT_XY = (60, 357)
+SQUAD_RIGHT_XY = (1220, 357)
 # --- Màn Disc Combo (giữ setup lần trước) ---
 DISC_TITLE = Button('ascension/DISC_TITLE.png', area=(105, 8, 295, 80))
 DISC_START_BATTLE = Button('ascension/DISC_START_BATTLE.png', area=(1065, 630, 1255, 700))
@@ -64,6 +80,9 @@ ENHANCE_FREE = Button('ascension/ENHANCE_FREE.png', threshold=0.88)
 LEAVE_MONOLITH = Button('ascension/LEAVE_MONOLITH.png', area=(360, 250, 920, 560))
 # Màn Record sau khi rời: Save Record (teal, góc phải-dưới) -> dialog "Record Saved" Confirm
 SAVE_RECORD = Button('ascension/SAVE_RECORD.png', area=(1030, 625, 1245, 690))
+# Khi save_record=OFF: thử rời màn Record không lưu bằng nút back góc trái-trên (chưa khảo sát kỹ;
+# nếu 2 lần không thoát được thì fallback lưu Record để run không kẹt).
+SAVE_RECORD_SKIP_XY = (66, 37)
 # Nút Confirm teal của dialog trong run: bắt cả biến thể giữa (640,508) lẫn phải (780,508)
 ASC_DIALOG_CONFIRM = Button('common/DIALOG_CONFIRM.png', area=(500, 455, 920, 560),
                             name='ASC_DIALOG_CONFIRM')
@@ -365,27 +384,99 @@ def card_lv(img, ci: int):
     return None
 
 
-def _gain(lv) -> int:
-    """Lợi tức chọn thẻ: Super Rare (không level, core build) = 99 (ưu tiên tuyệt đối);
-    thẻ mới "Lv. N" = N; nâng "A ▶ B" = B - A."""
+def read_squad(img):
+    """(squad hiện tại, tổng squad) từ hàng dot dưới tiêu đề "Squad N" trên màn chọn Squad.
+    Dot sáng (trắng) = squad đang chọn; các dot cách đều ~8px. None nếu không đọc được.
+    Khảo sát 2026-07-05: map dot sáng đúng squad 2/3/5 trên tài khoản 6 squad."""
+    band = img[62:74, 595:690]
+    b, g, r = [band[:, :, i].astype(int) for i in range(3)]
+    gray = band.mean(2)
+    # 'dot' = navy tối (dot chưa chọn) hoặc trắng trung tính (dot đang chọn) — khác nền trời xanh
+    dot = (gray < 120) | ((gray > 200) & ((b - r) < 50))
+    xs = np.where(dot.sum(0) >= 4)[0]
+    if len(xs) == 0:
+        return None
+    groups = []
+    for x in xs:
+        if groups and x - groups[-1][-1] <= 1:
+            groups[-1].append(int(x))
+        else:
+            groups.append([int(x)])
+    cens = [int(np.mean(gp)) + 595 for gp in groups]
+    # Giữ chuỗi dot cách đều (6..11px) dài nhất — loại blob rác lẻ (vd vạch trang trí ~x601)
+    best_run, run = [], [cens[0]]
+    for c in cens[1:]:
+        if 6 <= c - run[-1] <= 11:
+            run.append(c)
+        else:
+            best_run = run if len(run) > len(best_run) else best_run
+            run = [c]
+    best_run = run if len(run) > len(best_run) else best_run
+    if len(best_run) < 2:
+        return None
+    lit_idx, best = None, 205
+    for i, c in enumerate(best_run):
+        v = gray[:, max(0, c - 595 - 4):c - 595 + 5].max()
+        if v > best:
+            best, lit_idx = v, i
+    if lit_idx is None:
+        return None
+    return lit_idx + 1, len(best_run)
+
+
+def selected_map_center(img):
+    """y tâm card map đang chọn (page_ascension) = trung điểm 2 cụm khung góc XANH LÁ (trên+dưới)
+    ở dải trái x6-46. None nếu không thấy khung xanh. (Card cách nhau ~130px, khung cao ~135px nên
+    phải ghép cặp trên+dưới thay vì bắt trong 1 cửa sổ — tránh dính khung card kề)."""
+    strip = img[70:600, 6:46]
+    b, g, r = [strip[:, :, k].astype(int) for k in range(3)]
+    green = (g > 150) & (g - r > 50) & (g - b > 40)
+    ys = np.where(green.sum(1) > 2)[0]
+    if len(ys) < 4:
+        return None
+    clusters, cur = [], [ys[0]]
+    for y in ys[1:]:
+        if y - cur[-1] <= 15:
+            cur.append(y)
+        else:
+            clusters.append(cur)
+            cur = [y]
+    clusters.append(cur)
+    return int((np.mean(clusters[0]) + np.mean(clusters[-1])) / 2) + 70
+
+
+def _map_is_selected(img, y_center: int) -> bool:
+    """True nếu card map ở y_center (page_ascension) đang được chọn (khung xanh bao quanh)."""
+    c = selected_map_center(img)
+    return c is not None and abs(c - y_center) < 40
+
+
+def _gain(lv, priority: str = 'level_gain') -> int:
+    """Lợi tức chọn thẻ theo tiêu chí người chơi:
+    - level_gain: Super Rare (không level, core build) = 99 (ưu tiên tuyệt đối); thẻ mới "Lv. N" = N;
+      nâng "A ▶ B" = B - A.
+    - super_rare: chỉ SR = 99, còn lại 0 (hoà -> trái nhất).
+    - leftmost: mọi thẻ = 0 (luôn lấy trái nhất)."""
+    if priority == 'leftmost':
+        return 0
     if lv is None:
         return 99
-    return max(lv[1] - lv[0], 0)
+    return max(lv[1] - lv[0], 0) if priority == 'level_gain' else 0
 
 
 def _card_index(x: int) -> int:
     return 0 if x < 550 else (1 if x < 900 else 2)
 
 
-def pick_card(img, recs: list) -> tuple:
-    """Chọn thẻ trong các thẻ 👍: mức tăng level lớn nhất thắng (Super Rare không level = 99,
-    ưu tiên tuyệt đối); hoà -> thẻ trái nhất. Trả (chỉ số thẻ 0-2, mô tả lý do)."""
+def pick_card(img, recs: list, priority: str = 'level_gain') -> tuple:
+    """Chọn thẻ trong các thẻ 👍 theo `priority` (level_gain/super_rare/leftmost); hoà -> thẻ
+    trái nhất. Trả (chỉ số thẻ 0-2, mô tả lý do)."""
     if len(recs) == 1:
         return _card_index(recs[0]), '👍 duy nhất'
     best_g, best_ci, detail = -1, 0, []
     for x in recs:
         ci = _card_index(x)
-        g = _gain(card_lv(img, ci))
+        g = _gain(card_lv(img, ci), priority)
         detail.append(f'thẻ{ci + 1}:+{g if g < 99 else "SR"}')
         if g > best_g:
             best_g, best_ci = g, ci
@@ -412,38 +503,115 @@ class Ascension(UI):
     """
 
     def run(self) -> None:
-        self.ui_ensure(page_asc_diff)
+        self.cfg = self.config.ascension
+        if self.cfg.map:
+            self.ui_ensure(page_ascension)
+            self._select_map(self.cfg.map)   # loop bên dưới sẽ đi tiếp ascension -> asc_diff
+        runs = max(1, self.cfg.runs_per_session)
+        done = 0
+        for _ in range(runs):
+            self.ui_ensure(page_asc_diff)
+            self.device.screenshot()
+            if not self.appear(ASCENSION_QUICK_BATTLE):
+                if done == 0:
+                    logger.warning('Ascension: nút Quick Battle không sáng (difficulty chưa clear '
+                                   'hoặc hết vé?) — cần chơi tay 1 lần, bỏ qua hôm nay')
+                else:
+                    logger.info(f'Ascension: hết vé Quick Battle sau {done} run — dừng')
+                break
+            entered = self._enter_run()
+            if entered is None:      # preset_behavior=skip -> bỏ qua Ascension hôm nay
+                self.config.task_delay('Ascension', server_reset=True)
+                return
+            logger.info(f'Ascension: đã vào run {done + 1}/{runs} — bắt đầu vòng roguelike')
+            self._run_loop()
+            done += 1
 
-        self.device.screenshot()
-        if not self.appear(ASCENSION_QUICK_BATTLE):
-            logger.warning('Ascension: nút Quick Battle không sáng (difficulty chưa clear '
-                           'hoặc hết vé?) — cần chơi tay 1 lần, bỏ qua hôm nay')
-            self.config.task_delay('Ascension', server_reset=True)
-            return
+        logger.info(f'Ascension: hoàn tất {done}/{runs} run')
+        self.config.task_delay('Ascension', server_reset=True)
 
+    def _select_map(self, key: str) -> bool:
+        """Chọn map Monolith `key` trên page_ascension (tap nhãn map; verify khung xanh chọn).
+        Trả True nếu map đích đang được chọn. Không thấy nhãn/không xác nhận -> giữ map hiện tại."""
+        tpl = MAP_LABELS.get(key)
+        if tpl is None:
+            logger.warning(f'Ascension: map "{key}" không hợp lệ — giữ map game nhớ')
+            return False
+        for attempt in range(4):
+            img = self.device.screenshot()
+            if not self.appear(tpl):
+                logger.warning(f'Ascension: không thấy map "{key}" trong danh sách — giữ map hiện tại')
+                return False
+            x, y = tpl.last_match
+            if _map_is_selected(img, y):
+                logger.info(f'Ascension: đã chọn map "{key}"')
+                return True
+            logger.info(f'Ascension: chọn map "{key}" (tap {x},{y})')
+            self.device.click_xy(x, y, name=f'ASC_MAP_{attempt % 3}')
+            time.sleep(1.3)
+        logger.warning(f'Ascension: chọn map "{key}" — không xác nhận được khung chọn, vẫn đi tiếp')
+        return False
+
+    def _enter_run(self):
+        """Quick Battle -> màn Squad (chọn squad nếu cấu hình + kiểm tra Preset) -> Disc -> Start.
+        Trả True nếu đã vào run; None nếu preset_behavior=skip; raise TaskError nếu abort/lỗi nav."""
         self.device.click(ASCENSION_QUICK_BATTLE)
         if not self.wait_until_appear(SQUAD_TITLE, timeout=10):
             raise TaskError('Ascension: màn chọn Squad không mở sau Quick Battle')
-        self.device.screenshot()
-        if not self.appear(SQUAD_PRESET_SET):
-            logger.warning('Ascension: squad hiện tại có thể CHƯA gắn Potential Preset — '
-                           'run vẫn chạy nhưng sẽ không có thẻ 👍 để ưu tiên')
-        self.device.click(SQUAD_NEXT)
 
+        if self.cfg.squad > 0:
+            self._goto_squad(self.cfg.squad)
+
+        self.device.screenshot()
+        if self.appear(SQUAD_PRESET_NOT_SET):
+            b = self.cfg.preset_behavior
+            if b == 'abort':
+                raise TaskError('Ascension: squad CHƯA gắn Potential Preset (preset_behavior=abort) '
+                                '— dừng để người chơi vào set preset')
+            if b == 'skip':
+                logger.warning('Ascension: squad CHƯA gắn Potential Preset — bỏ qua Ascension hôm nay '
+                               '(preset_behavior=skip)')
+                return None
+            logger.warning('Ascension: squad CHƯA gắn Potential Preset — vẫn chạy (preset_behavior=warn), '
+                           'sẽ không có thẻ 👍 để ưu tiên')
+
+        self.device.click(SQUAD_NEXT)
         if not self.wait_until_appear(DISC_TITLE, timeout=10):
             raise TaskError('Ascension: màn Disc Combo không mở')
         self.device.click(DISC_START_BATTLE)
-        logger.info('Ascension: đã vào run — bắt đầu vòng roguelike')
+        return True
 
-        self._run_loop()
-        self.config.task_delay('Ascension', server_reset=True)
+    def _goto_squad(self, target: int) -> bool:
+        """Vuốt tới Squad `target` (1..N) trên màn Squad. Đọc dot xác định squad hiện tại rồi
+        đi hướng ngắn nhất (mũi tên wrap vòng). Trả True nếu tới đúng squad."""
+        for step in range(16):
+            st = read_squad(self.device.screenshot())
+            if st is None:
+                logger.warning('Ascension: không đọc được số Squad — giữ squad hiện tại')
+                return False
+            cur, total = st
+            if target > total:
+                logger.warning(f'Ascension: Squad {target} vượt tổng {total} — giữ Squad {cur}')
+                return False
+            if cur == target:
+                logger.info(f'Ascension: đã ở Squad {target}/{total}')
+                return True
+            suffix = step % 3
+            if (target - cur) % total <= (cur - target) % total:
+                self.device.click_xy(*SQUAD_RIGHT_XY, name=f'SQ_RIGHT_{suffix}')
+            else:
+                self.device.click_xy(*SQUAD_LEFT_XY, name=f'SQ_LEFT_{suffix}')
+            time.sleep(0.9)
+        logger.warning(f'Ascension: không tới được Squad {target} sau 16 bước')
+        return False
 
     # --- vòng roguelike -----------------------------------------------------
 
     def _run_loop(self) -> None:
-        end = time.time() + RUN_TIMEOUT
+        end = time.time() + self.cfg.run_timeout
         unknown = 0
         step = 0
+        save_tries = 0          # số lần thử rời màn Record không lưu (save_record=OFF)
         last_evt = None         # (x, y) option event vừa bấm
         evt_repeat = 0          # số lần bấm liên tiếp cùng 1 option mà màn không đổi
         shop_done = False       # đã mua ở phòng shop GIỮA RUN hiện tại chưa
@@ -475,10 +643,16 @@ class Ascension(UI):
                 time.sleep(10)
                 continue
 
-            # Màn Record cuối run: lưu record rồi Confirm (dialog "Record Saved")
+            # Màn Record cuối run: lưu record rồi Confirm (dialog "Record Saved").
+            # save_record=OFF -> thử rời không lưu; sau 2 lần không thoát thì fallback lưu (né kẹt run).
             if self.appear(SAVE_RECORD):
-                logger.info('Ascension: Save Record')
-                self.device.click_xy(*SAVE_RECORD.last_match, name=f'ASC_SAVE_{suffix}')
+                if self.cfg.save_record or save_tries >= 2:
+                    logger.info('Ascension: Save Record')
+                    self.device.click_xy(*SAVE_RECORD.last_match, name=f'ASC_SAVE_{suffix}')
+                else:
+                    save_tries += 1
+                    logger.info('Ascension: save_record tắt — thử rời màn Record không lưu')
+                    self.device.click_xy(*SAVE_RECORD_SKIP_XY, name=f'ASC_NOSAVE_{suffix}')
                 time.sleep(2)
                 continue
 
@@ -568,7 +742,7 @@ class Ascension(UI):
                 unknown = 0
             time.sleep(2)
 
-        raise TaskError(f'Ascension: run không kết thúc sau {RUN_TIMEOUT}s')
+        raise TaskError(f'Ascension: run không kết thúc sau {self.cfg.run_timeout}s')
 
     # --- chọn thẻ -----------------------------------------------------------
 
@@ -581,18 +755,19 @@ class Ascension(UI):
         if not recs and not has_select:
             return False
 
-        if self.appear(BRIEF_OFF):
+        if self.cfg.brief_mode and self.appear(BRIEF_OFF):
             self.device.click(BRIEF_OFF)
             logger.info('Ascension: bật Brief mode')
             time.sleep(1)
             return True
 
         if recs:
-            ci, why = pick_card(img, recs)
+            ci, why = pick_card(img, recs, self.cfg.card_priority)
             target = CARD_X[ci]
         else:
             # Không thẻ 👍: thử đổi bộ thẻ 1 lần (màn Enhance không có nút refresh -> tự bỏ qua)
-            if (has_select and not getattr(self, '_card_refreshed', False)
+            if (self.cfg.refresh_cards_no_recommend
+                    and has_select and not getattr(self, '_card_refreshed', False)
                     and self.appear(CARD_REFRESH)):
                 coins = read_coins(img)
                 if coins is None or coins >= CARD_REFRESH_COST:
@@ -653,7 +828,7 @@ class Ascension(UI):
         logger.info(f'Ascension: phòng Shop — mua sắm ({mode})')
         self.device.click_xy(640, SHOP_PURCHASE.last_match[1], name='ASC_SHOP_OPEN')
         time.sleep(3)
-        reserve = 0 if burn else ENHANCE_RESERVE
+        reserve = 0 if burn else self.cfg.enhance_reserve
         while True:
             if not self._shop_settle():
                 logger.warning('Ascension: lạc khỏi shop UI — dừng mua')
@@ -677,9 +852,10 @@ class Ascension(UI):
                 if coins is not None and coins - price < reserve:
                     continue  # slot sau có thể rẻ hơn -> không break
                 _, coins = self._buy_slot(i, price, sale, coins, reserve, burn)
-            # Refresh kệ: chỉ phòng cuối, còn lượt, và dư tiền mua tiếp sau khi refresh
+            # Refresh kệ: chỉ phòng cuối (nếu bật), còn lượt, và dư tiền mua tiếp sau khi refresh
             coins = read_coins(self.device.screenshot())
-            if (not last_room or self._shop_refreshes >= 2 or coins is None
+            if (not last_room or not self.cfg.refresh_shelf_last_room
+                    or self._shop_refreshes >= 2 or coins is None
                     or coins - SHOP_REFRESH_COST - reserve < SHOP_MIN_PRICE):
                 break
             if not self._shop_settle():
@@ -704,7 +880,8 @@ class Ascension(UI):
         img = self.device.screenshot()
         if not self.appear(SHOP_DIALOG):
             return False, coins  # Sold Out / màn khác chen ngang
-        if i >= 4 and not burn and not self.appear(SHOP_RELEVANT):
+        if i >= 4 and not burn and self.cfg.buy_melody_when_needed_only \
+                and not self.appear(SHOP_RELEVANT):
             logger.info(f'Ascension: slot{i} Melody không Harmony Skill nào cần — bỏ qua')
             self._audit_dump(f'skip_slot{i}')
             self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
@@ -790,8 +967,8 @@ class Ascension(UI):
                 # nên vẫn vượt mốc -> dừng sạch giữa run; đầu run coi như 60)
                 cost = (last_cost + ENHANCE_STEP) if last_cost is not None else ENHANCE_STEP
                 logger.warning(f'Ascension: không đọc được giá enhance — ước tính {cost}')
-            if not last_room and cost > ENHANCE_MILESTONE:
-                logger.info(f'Ascension: enhance đã tới mốc {ENHANCE_MILESTONE} '
+            if not last_room and cost > self.cfg.enhance_milestone:
+                logger.info(f'Ascension: enhance đã tới mốc {self.cfg.enhance_milestone} '
                             f'— giữ coin cho shop sau')
                 return
             coins = read_coins(img)

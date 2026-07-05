@@ -20,3 +20,11 @@ reference/
 
 # Claude Code local
 .claude/settings.local.json
+# Project settings có hook đường dẫn tuyệt đối máy cá nhân — không đẩy lên github
+.claude/settings.json
+
+# Kế hoạch nội bộ — không đẩy lên github
+PLAN.md
+
+# Gói phát hành đóng cục bộ (zip lớn — tải lên GitHub Releases thủ công)
+releases/

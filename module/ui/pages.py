@@ -26,10 +26,13 @@ MENU_CHECK = Button('menu/MENU_CHECK.png', area=(806, 10, 912, 82))
 GOTO_HOME = Button('common/GOTO_HOME.png', area=(332, 2, 420, 82), threshold=0.80)
 MAIL_ENTER = Button('home/MAIL_ENTER.png', area=(1121, 5, 1201, 78))
 FRIEND_ENTER = Button('home/FRIEND_ENTER.png', area=(1046, 4, 1126, 80))
-MISSIONS_ENTER = Button('home/MISSIONS_ENTER.png', area=(910, 90, 1005, 168))
+MISSIONS_ENTER = Button('home/MISSIONS_ENTER.png', area=(905, 88, 1012, 172), threshold=0.80)
 HEARTLINK_ENTER = Button('home/HEARTLINK_ENTER.png', area=(992, 90, 1090, 168))
 COMMISSION_ENTER = Button('home/COMMISSION_ENTER.png', area=(1168, 90, 1268, 168))
-SHOP_ENTER = Button('home/SHOP_ENTER.png', area=(95, 115, 190, 200))
+# SHOP_ENTER/MISSIONS_ENTER: crop TIGHT chỉ phần icon opaque (2026-07-05) — nền home đổi art theo
+# nhân vật nổi bật làm template cũ (dính nền) vỡ match (Shop 0.796, Missions 0.606). Icon-only +
+# threshold 0.80 -> bất biến nền (validate vs asset nền cũ: Shop 0.989, Missions 0.886).
+SHOP_ENTER = Button('home/SHOP_ENTER.png', area=(95, 115, 190, 205), threshold=0.80)
 GRANT_ENTER = Button('home/GRANT_ENTER.png', area=(178, 115, 272, 200))
 MENU_ENTER = Button('home/HOME_CHECK.png', area=(1150, 0, 1280, 90), name='MENU_ENTER')
 HEARTLINK_EXIT = Button('heartlink/HEARTLINK_EXIT.png', area=(1180, 10, 1260, 90))

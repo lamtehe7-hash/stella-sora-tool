@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Giao diện desktop kiểu Alas cho Stella Sora Tool. Chạy trong pywebview (app.py). -->
+<!-- Giao diện desktop kiểu Alas cho Stella Sora Tool. Chạy trong pywebview (app.py).
+     Text tĩnh gắn data-i18n; app.js dịch theo ngôn ngữ (VI/EN, đổi ở Home). -->
 <html lang="vi">
 <head>
 <meta charset="utf-8">
@@ -22,23 +23,23 @@
 </header>
 
 <div id="layout">
-  <!-- Rail trái: Home / sst / Cài đặt (giống Home / alas / Manage của Alas) -->
+  <!-- Rail trái: Home / sst / Cài đặt -->
   <nav id="rail">
-    <button class="rail-item" data-page="home" title="Trang chủ">
-      <span class="rail-icon">&lt;/&gt;</span><span class="rail-label">Home</span>
+    <button class="rail-item" data-page="home" title="Home">
+      <span class="rail-icon">&lt;/&gt;</span><span class="rail-label" data-i18n="nav_home">Home</span>
     </button>
     <button class="rail-item active" data-page="overview" title="Scheduler">
       <span class="rail-icon">▷</span><span class="rail-label">sst</span>
     </button>
-    <button class="rail-item" data-page="settings" title="Cấu hình">
-      <span class="rail-icon">⚙</span><span class="rail-label">Cấu hình</span>
+    <button class="rail-item" data-page="settings" title="Settings">
+      <span class="rail-icon">⚙</span><span class="rail-label" data-i18n="nav_settings">Cấu hình</span>
     </button>
   </nav>
 
   <!-- Sidebar menu -->
   <nav id="sidebar">
-    <div class="menu-item active" data-page="overview">Overview</div>
-    <div class="menu-group">Task</div>
+    <div class="menu-item active" data-page="overview" data-i18n="side_overview">Overview</div>
+    <div class="menu-group" data-i18n="side_task_group">Task</div>
     <div id="menu-tasks"><!-- JS render: mỗi task 1 dòng --></div>
   </nav>
 
@@ -47,31 +48,31 @@
     <div class="col-left">
       <section class="card">
         <div class="card-head">
-          <span class="card-title">Scheduler</span>
-          <button id="btn-scheduler" class="btn btn-primary">Bắt đầu</button>
+          <span class="card-title" data-i18n="card_scheduler">Scheduler</span>
+          <button id="btn-scheduler" class="btn btn-primary" data-i18n="btn_start">Bắt đầu</button>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-head"><span class="card-title">Đang chạy</span></div>
-        <div id="list-running" class="task-list"><div class="empty">Không có task</div></div>
+        <div class="card-head"><span class="card-title" data-i18n="card_running">Đang chạy</span></div>
+        <div id="list-running" class="task-list"><div class="empty" data-i18n="empty_task">Không có task</div></div>
       </section>
 
       <section class="card">
-        <div class="card-head"><span class="card-title">Sẵn sàng</span></div>
-        <div id="list-pending" class="task-list scroll"><div class="empty">Không có task</div></div>
+        <div class="card-head"><span class="card-title" data-i18n="card_pending">Sẵn sàng</span></div>
+        <div id="list-pending" class="task-list scroll"><div class="empty" data-i18n="empty_task">Không có task</div></div>
       </section>
 
       <section class="card">
-        <div class="card-head"><span class="card-title">Chờ đến hạn</span></div>
-        <div id="list-waiting" class="task-list scroll"><div class="empty">Không có task</div></div>
+        <div class="card-head"><span class="card-title" data-i18n="card_waiting">Chờ đến hạn</span></div>
+        <div id="list-waiting" class="task-list scroll"><div class="empty" data-i18n="empty_task">Không có task</div></div>
       </section>
     </div>
 
     <div class="col-right">
       <section class="card card-log">
         <div class="card-head">
-          <span class="card-title">Log</span>
+          <span class="card-title" data-i18n="card_log">Log</span>
           <button id="btn-autoscroll" class="btn btn-primary">Auto Scroll ON</button>
         </div>
         <pre id="log-body"></pre>
@@ -90,13 +91,138 @@
             <span class="slider"></span>
           </label>
         </div>
-        <div class="kv"><span>Chạy kế tiếp</span><b id="task-next">—</b></div>
+        <p id="task-desc" class="task-desc"></p>
+        <div class="kv"><span data-i18n="task_next_label">Chạy kế tiếp</span><b id="task-next">—</b></div>
         <div class="task-actions">
-          <button id="btn-run-now" class="btn btn-primary">Chạy ngay</button>
+          <button id="btn-run-now" class="btn btn-primary" data-i18n="btn_run_now">Chạy ngay</button>
         </div>
-        <p class="hint">“Chạy ngay” đặt task đến hạn tức thì. Nếu scheduler đang chạy, task sẽ được
+        <p class="hint" data-i18n="task_hint">“Chạy ngay” đặt task đến hạn tức thì. Nếu scheduler đang chạy, task sẽ được
         nhặt trong vòng lặp; nếu không, tool chạy đơn lẻ task này rồi dừng.</p>
       </section>
+
+      <!-- Cài đặt riêng cho Ascension (chỉ hiện khi mở task Ascension) -->
+      <div id="asc-settings" class="hidden">
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_map">Map (Monolith)</span></div>
+          <label class="set-row"><span data-i18n="lbl_map">Map sẽ chạy</span>
+            <select id="asc-map">
+              <option value="" data-i18n="opt_map_keep">Giữ map game nhớ</option>
+              <option value="currents">Currents and Shadows</option>
+              <option value="dust">Dust and Flames</option>
+              <option value="storm">Storm and Thunder</option>
+              <option value="misstep">Misstep On One</option>
+            </select></label>
+          <p class="hint" data-i18n="hint_map">Game nhớ map lần trước; chọn ở đây để tool tự chuyển map.</p>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_runs">Vé &amp; số lần chạy</span></div>
+          <label class="set-row"><span data-i18n="lbl_runs">Số run mỗi lần (mỗi run 1 vé)</span>
+            <input id="asc-runs" type="number" min="1" max="50"></label>
+          <p class="hint" data-i18n="hint_runs">Hết vé Quick Battle thì tự dừng sớm.</p>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_squad">Đội hình (Squad)</span></div>
+          <label class="set-row"><span data-i18n="lbl_squad">Squad dùng (0 = giữ nguyên)</span>
+            <input id="asc-squad" type="number" min="0" max="20"></label>
+          <p class="hint" data-i18n="hint_squad">Tự vuốt tới squad này trước khi vào run.</p>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_preset">Kiểm tra Preset</span></div>
+          <label class="set-row"><span data-i18n="lbl_preset">Khi “Preset not set”</span>
+            <select id="asc-preset">
+              <option value="warn" data-i18n="opt_warn">Cảnh báo &amp; chạy tiếp</option>
+              <option value="skip" data-i18n="opt_skip">Bỏ qua hôm nay</option>
+              <option value="abort" data-i18n="opt_abort">Báo lỗi &amp; dừng</option>
+            </select></label>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_card">Chọn thẻ</span></div>
+          <label class="set-row"><span data-i18n="lbl_card">Ưu tiên khi nhiều thẻ 👍</span>
+            <select id="asc-card">
+              <option value="level_gain" data-i18n="opt_levelgain">Mức tăng level cao nhất</option>
+              <option value="super_rare" data-i18n="opt_sr">Ưu tiên Super Rare</option>
+              <option value="leftmost" data-i18n="opt_leftmost">Thẻ trái nhất</option>
+            </select></label>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_shop">Chiến lược Shop</span></div>
+          <label class="check-row"><input id="asc-melody" type="checkbox">
+            <span data-i18n="lbl_melody">Chỉ mua Melody khi cần thiết</span></label>
+          <label class="set-row"><span data-i18n="lbl_milestone">Mốc enhance giữa run (coin)</span>
+            <input id="asc-milestone" type="number" min="0" max="2000"></label>
+          <label class="set-row"><span data-i18n="lbl_reserve">Coin dự trữ để enhance</span>
+            <input id="asc-reserve" type="number" min="0" max="2000"></label>
+          <label class="check-row"><input id="asc-refshelf" type="checkbox">
+            <span data-i18n="lbl_refshelf">Refresh kệ ở phòng cuối</span></label>
+          <label class="check-row"><input id="asc-refcards" type="checkbox">
+            <span data-i18n="lbl_refcards">Refresh bộ thẻ khi không có 👍</span></label>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_run">Tinh chỉnh run</span></div>
+          <label class="check-row"><input id="asc-brief" type="checkbox">
+            <span data-i18n="lbl_brief">Bật Brief mode (chạy nhanh)</span></label>
+          <label class="check-row"><input id="asc-save" type="checkbox">
+            <span data-i18n="lbl_saverec">Lưu Record cuối run</span></label>
+          <label class="set-row"><span data-i18n="lbl_timeout">Thời gian tối đa 1 run (giây)</span>
+            <input id="asc-timeout" type="number" min="300" max="7200"></label>
+          <div class="task-actions">
+            <button id="btn-save-asc" class="btn btn-primary" data-i18n="btn_save_asc">Lưu cài đặt Ascension</button>
+            <span id="asc-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Cài đặt riêng cho Bounty Trial (chỉ hiện khi mở task Bounty Trial) -->
+      <div id="bounty-settings" class="hidden">
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_trial">Loại Trial (map)</span></div>
+          <label class="set-row"><span data-i18n="lbl_trial">Trial sẽ chạy</span>
+            <select id="bt-trial">
+              <option value="basic" data-i18n="opt_trial_basic">Basic Trial — Nguyên liệu</option>
+              <option value="tierup" data-i18n="opt_trial_tierup">Tier-up Trial — Thăng bậc</option>
+              <option value="skill" data-i18n="opt_trial_skill">Skill Trial — Nâng skill</option>
+              <option value="emblem" data-i18n="opt_trial_emblem">Emblem Trial — Emblem</option>
+            </select></label>
+          <label class="set-row"><span data-i18n="lbl_difficulty">Độ khó</span>
+            <select id="bt-difficulty">
+              <option value="0" data-i18n="opt_diff_keep">Giữ nguyên game nhớ</option>
+              <option value="1">Difficulty 1</option>
+              <option value="2">Difficulty 2</option>
+              <option value="3">Difficulty 3</option>
+              <option value="4">Difficulty 4</option>
+              <option value="5">Difficulty 5</option>
+              <option value="6">Difficulty 6</option>
+            </select></label>
+          <p class="hint" data-i18n="hint_bounty">Quick Battle tự auto-clear (sweep) tối đa số lần theo Vigor hiện có. Difficulty phải đã clear thì Quick Battle mới khả dụng.</p>
+          <div class="task-actions">
+            <button id="btn-save-bounty" class="btn btn-primary" data-i18n="btn_save_bounty">Lưu cài đặt Bounty Trial</button>
+            <span id="bounty-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Cài đặt riêng cho Event (chỉ hiện khi mở task EventDaily) -->
+      <div id="event-settings" class="hidden">
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_event_stage">Stage sự kiện</span></div>
+          <label class="set-row"><span data-i18n="lbl_event_stage">Stage sẽ Quick Battle</span>
+            <input id="ev-stage" type="text" placeholder="1-12" maxlength="8"></label>
+          <p class="hint" data-i18n="hint_event_stage">Để TRỐNG = stage cao nhất (phải nhất). Nhập tên (vd 1-12) để chọn đúng stage — tool tự cuộn + OCR badge tìm.</p>
+          <label class="set-row"><span data-i18n="lbl_event_battles">Số trận (0 = tối đa theo Vigor)</span>
+            <input id="ev-battles" type="number" min="0" max="999"></label>
+          <p class="hint" data-i18n="hint_event">Sự kiện theo đợt: đổi event cần re-crop banner (assets/en/event/EVENT_BANNER.png) và chỉnh lại stage. Không tìm thấy banner/stage thì tool bỏ qua (không chạy nhầm).</p>
+          <div class="task-actions">
+            <button id="btn-save-event" class="btn btn-primary" data-i18n="btn_save_event">Lưu cài đặt Event</button>
+            <span id="event-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 
@@ -105,14 +231,18 @@
     <div class="home-wrap">
       <div class="home-logo">🌠</div>
       <h1>Stella Sora Tool</h1>
-      <p class="muted">Chọn giao diện / Change theme</p>
+      <p class="muted" data-i18n="home_theme">Giao diện / Theme</p>
       <div class="theme-row">
-        <button class="btn btn-ghost" data-theme="light">Sáng</button>
-        <button class="btn btn-dark" data-theme="dark">Tối</button>
+        <button class="btn btn-ghost" data-theme="light" data-i18n="theme_light">Sáng</button>
+        <button class="btn btn-dark" data-theme="dark" data-i18n="theme_dark">Tối</button>
       </div>
-      <p class="muted home-note">
-        Tool tự động hoá Stella Sora (EN) trên giả lập — miễn phí &amp; mã nguồn để dùng cá nhân.<br>
-        Bản desktop này tương đương giao diện web (<code>python gui.py</code>).
+      <p class="muted" data-i18n="home_lang">Ngôn ngữ / Language</p>
+      <div class="theme-row">
+        <button class="btn btn-ghost" data-lang="vi">Tiếng Việt</button>
+        <button class="btn btn-ghost" data-lang="en">English</button>
+      </div>
+      <p class="muted home-note" data-i18n="home_note">
+        Tool tự động hoá Stella Sora (EN) trên giả lập — miễn phí &amp; mã nguồn để dùng cá nhân.
       </p>
     </div>
   </main>
@@ -121,16 +251,16 @@
   <main id="page-settings" class="page hidden">
     <div class="col-narrow">
       <section class="card">
-        <div class="card-head"><span class="card-title">Cấu hình</span></div>
+        <div class="card-head"><span class="card-title" data-i18n="settings_title">Cấu hình</span></div>
         <div class="form">
-          <label>Serial giả lập <input id="cfg-serial" type="text"></label>
-          <label>Đường dẫn adb.exe <input id="cfg-adb" type="text"></label>
-          <label>Giờ reset daily (UTC, HH:MM) <input id="cfg-reset" type="text"></label>
+          <label><span data-i18n="lbl_serial">Serial giả lập</span> <input id="cfg-serial" type="text"></label>
+          <label><span data-i18n="lbl_adb">Đường dẫn adb.exe</span> <input id="cfg-adb" type="text"></label>
+          <label><span data-i18n="lbl_reset">Giờ reset daily (UTC, HH:MM)</span> <input id="cfg-reset" type="text"></label>
           <label class="check-row">
-            <input id="cfg-close" type="checkbox"> Đóng game khi Cleanup
+            <input id="cfg-close" type="checkbox"> <span data-i18n="lbl_close">Đóng game khi Cleanup</span>
           </label>
-          <button id="btn-save-cfg" class="btn btn-primary">Lưu cấu hình</button>
-          <span id="cfg-saved" class="saved-note hidden">✓ Đã lưu</span>
+          <button id="btn-save-cfg" class="btn btn-primary" data-i18n="btn_save">Lưu cấu hình</button>
+          <span id="cfg-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
         </div>
       </section>
     </div>

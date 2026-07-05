@@ -65,6 +65,12 @@ class Device:
         logger.info(f'Click {name} @ ({x}, {y})')
         self.adb.tap(x, y)
 
+    def swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300,
+              name: str = 'SWIPE') -> None:
+        """Vuốt (cuộn danh sách). Không tính vào click-record chống double-click."""
+        logger.info(f'Swipe {name} ({x1},{y1})->({x2},{y2})')
+        self.adb.swipe(x1, y1, x2, y2, duration_ms)
+
     def _check_click_record(self) -> None:
         r = list(self._click_record)
         if len(r) == self._click_record.maxlen and len(set(r)) <= 2:
