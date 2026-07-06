@@ -16,9 +16,11 @@ from tasks.cleanup import Cleanup
 from tasks.daily_reward import DailyReward
 from tasks.dispatch import Dispatch
 from tasks.event_daily import EventDaily
+from tasks.friend_gift import FriendGift
 from tasks.grant import Grant
 from tasks.login import Login
 from tasks.mail import Mail
+from tasks.purchase_gift import PurchaseGift
 from tasks.shop import Shop
 
 TASKS = {
@@ -26,11 +28,12 @@ TASKS = {
     'Mail': Mail,
     'Dispatch': Dispatch,
     'Shop': Shop,
+    'PurchaseGift': PurchaseGift,  # nhận Daily Gift free ở màn Purchase (chỉ khi còn quà/chấm đỏ)
     'BountyTrial': BountyTrial,  # (đổi tên từ Stamina) tiêu Vigor: Trial Quick Battle sweep
     'Ascension': Ascension,  # 1 run Monolith Quick Battle/ngày (mission daily), tốn vé không tốn Vigor
     'EventDaily': EventDaily,  # Quick Battle sweep Battle Stage của sự kiện đang diễn ra (theo đợt)
     'Grant': Grant,  # nhận quà Startup Grant (Company Goal + Milestone) SAU các task tạo progress
-    # Phase 4 còn lại: FriendGift
+    'FriendGift': FriendGift,  # trao đổi stamina với bạn (Acquire All + Gift All); TRƯỚC DailyReward
     'DailyReward': DailyReward,  # gần cuối: gom mission + điểm hoạt động SAU khi các task khác xong
     'Cleanup': Cleanup,  # luôn cuối: về home / đóng game
 }

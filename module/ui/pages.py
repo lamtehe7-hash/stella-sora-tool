@@ -17,6 +17,7 @@ SHOP_CHECK = Button('shop/SHOP_CHECK.png', area=(132, 8, 232, 80))
 GRANT_CHECK = Button('grant/GRANT_CHECK.png', area=(132, 8, 360, 80))
 MAIL_CHECK = Button('mail/MAIL_CHECK.png', area=(132, 8, 226, 80))
 FRIEND_CHECK = Button('friend/FRIEND_CHECK.png', area=(132, 8, 245, 80))
+PURCHASE_CHECK = Button('purchase/PURCHASE_CHECK.png', area=(132, 8, 270, 80))
 HEARTLINK_CHECK = Button('heartlink/HEARTLINK_CHECK.png', area=(88, 612, 220, 696))
 MENU_CHECK = Button('menu/MENU_CHECK.png', area=(806, 10, 912, 82))
 
@@ -25,10 +26,16 @@ MENU_CHECK = Button('menu/MENU_CHECK.png', area=(806, 10, 912, 82))
 # trang không có nút ≤0.454 — đo 2026-07-04)
 GOTO_HOME = Button('common/GOTO_HOME.png', area=(332, 2, 420, 82), threshold=0.80)
 MAIL_ENTER = Button('home/MAIL_ENTER.png', area=(1121, 5, 1201, 78))
-FRIEND_ENTER = Button('home/FRIEND_ENTER.png', area=(1046, 4, 1126, 80))
+# FRIEND_ENTER: re-crop icon-only (2-người, phần trái+giữa) né CHẤM ĐỎ thông báo ở góc phải-trên
+# (2026-07-06) — template cũ dính vùng chấm đỏ nên vỡ match khi có thông báo (0.776<0.85). Icon-only
+# + threshold 0.80 -> bất biến có/không chấm đỏ (đo: home 1.000, friend_profile 0.251).
+FRIEND_ENTER = Button('home/FRIEND_ENTER.png', area=(1046, 4, 1126, 80), threshold=0.80)
 MISSIONS_ENTER = Button('home/MISSIONS_ENTER.png', area=(905, 88, 1012, 172), threshold=0.80)
 HEARTLINK_ENTER = Button('home/HEARTLINK_ENTER.png', area=(992, 90, 1090, 168))
 COMMISSION_ENTER = Button('home/COMMISSION_ENTER.png', area=(1168, 90, 1268, 168))
+# PURCHASE_ENTER (hàng icon 2 ở home, giữa Heartlink và Commission): crop icon xe-đẩy opaque, né
+# CHẤM ĐỎ góc phải-trên + threshold 0.80 (nền art đổi theo nhân vật) — cùng lý do SHOP/MISSIONS.
+PURCHASE_ENTER = Button('home/PURCHASE_ENTER.png', area=(1075, 88, 1175, 150), threshold=0.80)
 # SHOP_ENTER/MISSIONS_ENTER: crop TIGHT chỉ phần icon opaque (2026-07-05) — nền home đổi art theo
 # nhân vật nổi bật làm template cũ (dính nền) vỡ match (Shop 0.796, Missions 0.606). Icon-only +
 # threshold 0.80 -> bất biến nền (validate vs asset nền cũ: Shop 0.989, Missions 0.886).
@@ -71,6 +78,7 @@ page_commission = Page('commission', COMMISSION_CHECK)
 page_shop = Page('shop', SHOP_CHECK)
 page_grant = Page('grant', GRANT_CHECK)
 page_friend = Page('friend', FRIEND_CHECK)
+page_purchase = Page('purchase', PURCHASE_CHECK)
 page_heartlink = Page('heartlink', HEARTLINK_CHECK)
 page_menu = Page('menu', MENU_CHECK)
 page_go = Page('go', GO_CHECK)
@@ -85,6 +93,7 @@ page_home.link(COMMISSION_ENTER, page_commission)
 page_home.link(SHOP_ENTER, page_shop)
 page_home.link(GRANT_ENTER, page_grant)
 page_home.link(FRIEND_ENTER, page_friend)
+page_home.link(PURCHASE_ENTER, page_purchase)
 page_home.link(HEARTLINK_ENTER, page_heartlink)
 page_home.link(MENU_ENTER, page_menu)
 
@@ -98,7 +107,7 @@ page_ascension.link(GO_HUB_HOME, page_home)
 page_ascension.link(ASCENSION_ENTER, page_asc_diff)
 
 for _p in (page_mail, page_missions, page_commission, page_shop, page_grant, page_friend,
-           page_basic_trial, page_asc_diff):
+           page_purchase, page_basic_trial, page_asc_diff):
     _p.link(GOTO_HOME, page_home)
 page_heartlink.link(HEARTLINK_EXIT, page_home)
 page_menu.link(MENU_CLOSE, page_home)
