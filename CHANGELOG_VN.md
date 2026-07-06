@@ -1,5 +1,26 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.3.0 (2026-07-07) — pre-release — nhóm Event + task Event First Clear
+
+### Task mới: Event First Clear
+- **`EventFirstClear`** — tự **đánh thật** (Go → Deploy → Auto-Battle) các stage Battle Stage sự kiện
+  còn **sao xám** (chưa first-clear) để lấy quà First Clear (đá quý, nguyên liệu). Khác `EventDaily`
+  (Quick Battle *sweep* các stage đã master để tiêu Vigor).
+- **3 checkbox độ khó** Normal / Hard / Challenge (tab thứ 3) — mỗi lần chạy, với từng độ khó được
+  bật, tool quét các stage sao xám rồi đánh lần lượt. Độ khó đang **khoá tự bỏ qua** (nhận biết bằng
+  độ sáng pill). Clear 1 stage thường mở khoá stage kế → tự re-scan.
+- **Nhận biết (khảo sát live 2026-07-07, GUNFIRE chapter 2)**: sao **vàng** = đã first-clear (bỏ),
+  **xám/bạc** = chưa (đánh), **padlock** = khoá (bỏ) — phân loại bằng màu trên ribbon "N-N".
+  **Auto-Battle** tự bật khi phát hiện đang TẮT (nhận biết bằng **viền xanh** quanh nút, bấm **1
+  lần/trận**) — không bao giờ vô tình tắt trận đang chạy.
+- **Mặc định TẮT** (sự kiện theo đợt + tốn Vigor 30/trận). Đổi event cần re-crop `EVENT_BANNER` như
+  Event Daily. Tinh chỉnh: `max_stages` (trần stage/lần), `run_timeout` (giây/trận).
+
+### Giao diện
+- **Nhóm "Event" thu gọn/mở rộng** trong sidebar app (kiểu Alas) — gộp **Event Daily** + **Event
+  First Clear**. Bấm tiêu đề nhóm để đóng/mở (nhớ trạng thái).
+- Thêm **trang cài đặt Event First Clear** (3 checkbox độ khó + tinh chỉnh).
+
 ## v0.2.0 (2026-07-05) — pre-release — tối ưu Ascension
 
 Dựa trên nghiên cứu cơ chế Monolith/Ascension đa nguồn (EN/JP/CN) đã verify — chi tiết ở

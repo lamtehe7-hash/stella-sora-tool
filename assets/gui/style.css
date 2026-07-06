@@ -111,6 +111,18 @@ body {
 }
 .menu-item .mini { float: right; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .menu-item.task-off { color: var(--muted); }
+/* Nhóm task thu gọn/mở rộng trong sidebar (kiểu Alas) */
+.menu-parent {
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 15px; font-weight: 700;
+  user-select: none;
+  display: flex; align-items: center; gap: 7px;
+}
+.menu-parent:hover { background: rgba(127,127,127,.08); }
+.menu-parent .caret { font-size: 10px; color: var(--muted); transition: transform .15s; }
+.menu-parent.collapsed .caret { transform: rotate(-90deg); }
+.menu-item.child { padding-left: 36px; font-size: 14px; }
 .menu-group {
   padding: 14px 20px 4px;
   font-size: 12px; font-weight: 700;

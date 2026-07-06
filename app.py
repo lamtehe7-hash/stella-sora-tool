@@ -45,6 +45,7 @@ MSG = {
     'asc_saved':         ('Đã lưu cài đặt Ascension', 'Ascension settings saved'),
     'bounty_saved':      ('Đã lưu cài đặt Bounty Trial', 'Bounty Trial settings saved'),
     'event_saved':       ('Đã lưu cài đặt Event', 'Event settings saved'),
+    'efc_saved':         ('Đã lưu cài đặt Event First Clear', 'Event First Clear settings saved'),
 }
 PRESET_BEHAVIORS = ('warn', 'skip', 'abort')
 CARD_PRIORITIES = ('level_gain', 'super_rare', 'leftmost')
@@ -226,6 +227,23 @@ class Api:
         cfg.save()
         logger.info('GUI: đã lưu cài đặt Event')
         return _m(cfg, 'event_saved')
+
+    # --- Cài đặt task EventFirstClear ---
+
+    def get_event_first_clear(self) -> dict:
+        return Config.load().event_first_clear.model_dump()
+
+    def save_event_first_clear(self, data: dict) -> str:
+        cfg = Config.load()
+        e = cfg.event_first_clear
+        e.normal = bool(data['normal'])
+        e.hard = bool(data['hard'])
+        e.challenge = bool(data['challenge'])
+        e.max_stages = max(1, min(50, int(data['max_stages'])))
+        e.run_timeout = max(60, min(600, int(data['run_timeout'])))
+        cfg.save()
+        logger.info('GUI: đã lưu cài đặt Event First Clear')
+        return _m(cfg, 'efc_saved')
 
 
 WIN_W, WIN_H = 1380, 900

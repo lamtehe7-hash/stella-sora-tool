@@ -246,6 +246,33 @@
           </div>
         </section>
       </div>
+
+      <!-- Cài đặt riêng cho Event First Clear (chỉ hiện khi mở task EventFirstClear) -->
+      <div id="efc-settings" class="hidden">
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_efc_diff">Độ khó tự đánh</span></div>
+          <label class="check-row"><input id="efc-normal" type="checkbox">
+            <span data-i18n="lbl_efc_normal">Normal</span></label>
+          <label class="check-row"><input id="efc-hard" type="checkbox">
+            <span data-i18n="lbl_efc_hard">Hard</span></label>
+          <label class="check-row"><input id="efc-challenge" type="checkbox">
+            <span data-i18n="lbl_efc_challenge">Challenge (tab thứ 3)</span></label>
+          <p class="hint" data-i18n="hint_efc_diff">Mỗi lần chạy, với từng độ khó được bật, tool tìm các stage còn sao XÁM (chưa first-clear) rồi tự đánh (Deploy + Auto-Battle). Độ khó đang KHOÁ sẽ tự bỏ qua.</p>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_efc_tune">Tinh chỉnh</span></div>
+          <label class="set-row"><span data-i18n="lbl_efc_max">Trần số stage mỗi lần chạy</span>
+            <input id="efc-max" type="number" min="1" max="50"></label>
+          <label class="set-row"><span data-i18n="lbl_efc_timeout">Thời gian tối đa 1 trận (giây)</span>
+            <input id="efc-timeout" type="number" min="60" max="600"></label>
+          <p class="hint" data-i18n="hint_efc_tune">Auto-Battle tự bật khi phát hiện đang TẮT (nhận biết bằng viền xanh quanh nút) — không bao giờ vô tình tắt trận đang chạy. Sự kiện theo đợt: đổi event cần re-crop banner (như Event Daily).</p>
+          <div class="task-actions">
+            <button id="btn-save-efc" class="btn btn-primary" data-i18n="btn_save_efc">Lưu cài đặt Event First Clear</button>
+            <span id="efc-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 

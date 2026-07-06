@@ -17,7 +17,8 @@ EPOCH = datetime(2020, 1, 1)
 #   Ascension  — tốn vé + chạy lâu, để người chơi chủ động bật.
 #   BountyTrial — tiêu Vigor, người chơi tự quyết có tiêu vào Trial hay không.
 #   EventDaily  — sự kiện theo đợt, cần crop banner + set stage mỗi đợt trước khi bật.
-DEFAULT_OFF_TASKS = {'Ascension', 'BountyTrial', 'EventDaily'}
+#   EventFirstClear — như EventDaily: sự kiện theo đợt + tốn Vigor đánh thật từng stage.
+DEFAULT_OFF_TASKS = {'Ascension', 'BountyTrial', 'EventDaily', 'EventFirstClear'}
 
 
 def utcnow() -> datetime:
@@ -134,6 +135,20 @@ class EventConfig(BaseModel):
     battles: int = 0
 
 
+class EventFirstClearConfig(BaseModel):
+    """Tuỳ chọn task EventFirstClear (tự đánh Deploy + Auto-Battle các stage còn sao XÁM để lấy
+    quà First Clear).
+
+    3 checkbox tương ứng 3 tab độ khó góc dưới-trái màn Battle Stage. Độ khó đang KHOÁ sẽ tự bỏ
+    qua. Mỗi lần chạy chỉ đánh các stage CHƯA first-clear (sao xám) rồi hẹn lại sau reset.
+    """
+    normal: bool = True        # tab Normal
+    hard: bool = True          # tab Hard (chỉ chạy khi đã mở khoá)
+    challenge: bool = True     # tab thứ 3 (Challenge — tên tuỳ event; chỉ chạy khi mở khoá)
+    max_stages: int = 12       # trần số stage đánh mỗi lần chạy (chống lặp vô hạn)
+    run_timeout: int = 180     # thời gian tối đa 1 trận (giây) — Auto-Battle tự bật khi phát hiện OFF
+
+
 class Config(BaseModel):
     emulator: EmulatorConfig = Field(default_factory=EmulatorConfig)
     server: str = 'en'
@@ -147,6 +162,7 @@ class Config(BaseModel):
     ascension: AscensionConfig = Field(default_factory=AscensionConfig)
     bounty: BountyConfig = Field(default_factory=BountyConfig)
     event: EventConfig = Field(default_factory=EventConfig)
+    event_first_clear: EventFirstClearConfig = Field(default_factory=EventFirstClearConfig)
     tasks: Dict[str, TaskSettings] = Field(default_factory=dict)
 
     @classmethod

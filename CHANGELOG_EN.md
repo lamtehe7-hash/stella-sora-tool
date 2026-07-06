@@ -1,5 +1,27 @@
 # Changelog — Stella Sora Tool
 
+## v0.3.0 (2026-07-07) — pre-release — Event group + Event First Clear task
+
+### New task: Event First Clear
+- **`EventFirstClear`** — actually **plays** (Go → Deploy → Auto-Battle) the event Battle Stage stages
+  that still have **gray stars** (not first-cleared) to grab First Clear rewards (gems, materials).
+  Different from `EventDaily` (Quick Battle *sweep* of already-mastered stages to spend Vigor).
+- **3 difficulty checkboxes** Normal / Hard / Challenge (3rd tab) — each run, for every enabled
+  difficulty, it scans for gray-star stages and clears them in order. **Locked difficulties are
+  skipped** (detected via the selected-pill brightness). Clearing a stage usually unlocks the next →
+  auto re-scan.
+- **Detection (live survey 2026-07-07, GUNFIRE chapter 2)**: **gold** stars = first-cleared (skip),
+  **gray/silver** = not yet (play), **padlock** = locked (skip) — classified by color on the "N-N"
+  ribbon. **Auto-Battle** is turned on only when detected OFF (via the **blue ring** around the button,
+  tapped **once per battle**) — it never accidentally turns off a running battle.
+- **OFF by default** (events are temporary + costs 30 Vigor/battle). Switching events needs re-cropping
+  `EVENT_BANNER` like Event Daily. Tuning: `max_stages` (per-run cap), `run_timeout` (seconds/battle).
+
+### UI
+- **Collapsible "Event" group** in the app sidebar (Alas-style) grouping **Event Daily** + **Event
+  First Clear**. Click the group header to collapse/expand (state remembered).
+- Added an **Event First Clear settings page** (3 difficulty checkboxes + tuning).
+
 ## v0.2.0 (2026-07-05) — pre-release — Ascension optimization
 
 Based on verified multi-source research (EN/JP/CN) of the Monolith/Ascension mechanics — see

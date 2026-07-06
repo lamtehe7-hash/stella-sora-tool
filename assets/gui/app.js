@@ -107,6 +107,20 @@ const I18N = {
   hint_event:        { vi: 'Sự kiện theo đợt: đổi event cần re-crop banner (assets/en/event/EVENT_BANNER.png) và chỉnh lại stage. Không tìm thấy banner/stage thì tool bỏ qua (không chạy nhầm).',
                        en: 'Events are temporary: switching events needs re-cropping the banner (assets/en/event/EVENT_BANNER.png) and re-setting the stage. If the banner/stage is not found the tool skips (never runs the wrong stage).' },
   btn_save_event:    { vi: 'Lưu cài đặt Event', en: 'Save Event settings' },
+  // --- Event First Clear settings ---
+  side_group_event:  { vi: 'Event', en: 'Event' },
+  grp_efc_diff:      { vi: 'Độ khó tự đánh', en: 'Difficulties to clear' },
+  lbl_efc_normal:    { vi: 'Normal', en: 'Normal' },
+  lbl_efc_hard:      { vi: 'Hard', en: 'Hard' },
+  lbl_efc_challenge: { vi: 'Challenge (tab thứ 3)', en: 'Challenge (3rd tab)' },
+  hint_efc_diff:     { vi: 'Mỗi lần chạy, với từng độ khó được bật, tool tìm các stage còn sao XÁM (chưa first-clear) rồi tự đánh (Deploy + Auto-Battle). Độ khó đang KHOÁ sẽ tự bỏ qua.',
+                       en: 'Each run, for every enabled difficulty, the tool finds stages that still have GRAY stars (not first-cleared) and plays them (Deploy + Auto-Battle). Locked difficulties are skipped.' },
+  grp_efc_tune:      { vi: 'Tinh chỉnh', en: 'Tuning' },
+  lbl_efc_max:       { vi: 'Trần số stage mỗi lần chạy', en: 'Max stages per run' },
+  lbl_efc_timeout:   { vi: 'Thời gian tối đa 1 trận (giây)', en: 'Max time per battle (seconds)' },
+  hint_efc_tune:     { vi: 'Auto-Battle tự bật khi phát hiện đang TẮT (nhận biết bằng viền xanh quanh nút) — không bao giờ vô tình tắt trận đang chạy. Sự kiện theo đợt: đổi event cần re-crop banner (như Event Daily).',
+                       en: 'Auto-Battle is enabled only when detected OFF (via the blue ring around the button) — it never accidentally turns off a running battle. Events are temporary: switching events needs re-cropping the banner (like Event Daily).' },
+  btn_save_efc:      { vi: 'Lưu cài đặt Event First Clear', en: 'Save Event First Clear settings' },
   // --- dynamic ---
   ready:          { vi: 'sẵn sàng', en: 'ready' },
   disabled:       { vi: 'đã tắt', en: 'disabled' },
@@ -139,6 +153,8 @@ const TASK_DESC = {
                  en: 'Runs Monolith Quick Battle (uses Monolith tickets, NOT Vigor): auto map/squad select, card pick, shop buying and enhancing per the settings below.' },
   EventDaily:  { vi: 'Quick Battle sweep ở Battle Stage của sự kiện (tiêu Vigor): vào qua banner sự kiện ở home, chọn stage & số trận bên dưới. Sau đó tự nhận quà Event Missions nếu có chấm đỏ.',
                  en: 'Quick Battle sweep at the current event’s Battle Stage (spends Vigor): enters via the home event banner, pick stage & battle count below. Then auto-claims Event Missions rewards if the red dot is present.' },
+  EventFirstClear: { vi: 'Tự đánh (Deploy + Auto-Battle) các stage Battle Stage sự kiện còn sao XÁM để lấy quà First Clear. Chọn độ khó (Normal/Hard/Challenge) bên dưới — độ khó đang khoá sẽ tự bỏ qua. Tiêu Vigor (30/trận).',
+                 en: 'Auto-plays (Deploy + Auto-Battle) the event Battle Stage stages that still have GRAY stars to grab First Clear rewards. Pick difficulties (Normal/Hard/Challenge) below — locked ones are skipped. Spends Vigor (30/battle).' },
   Grant:       { vi: 'Nhận quà Startup Grant: nếu tab "Company Goal" hoặc "Grant Milestone" có chấm đỏ thì bấm Claim All (Company Goal trước để lên Grant Tier), tự đóng popup nhận quà.',
                  en: 'Claims Startup Grant rewards: if the "Company Goal" or "Grant Milestone" tab has a red dot, presses Claim All (Company Goal first to raise Grant Tier) and auto-dismisses the reward popups.' },
   DailyReward: { vi: 'Nhận tất cả nhiệm vụ hằng ngày + các mốc điểm hoạt động (chạy gần cuối để gom trọn điểm sau các task khác).',
@@ -148,8 +164,15 @@ const TASK_DESC = {
 };
 
 // Tên hiển thị đẹp cho task (key nội bộ không đổi để giữ tương thích config/API).
-const TASK_LABEL = { BountyTrial: 'Bounty Trial', EventDaily: 'Event Daily' };
+const TASK_LABEL = { BountyTrial: 'Bounty Trial', EventDaily: 'Event Daily',
+                     EventFirstClear: 'Event First Clear' };
 const label = (name) => TASK_LABEL[name] || name;
+
+// Nhóm task thu gọn/mở rộng trong sidebar (kiểu Alas). Thành viên phải LIỀN KỀ trong ORDER.
+const MENU_GROUPS = { Event: ['EventDaily', 'EventFirstClear'] };
+const TASK_GROUP = {};
+Object.entries(MENU_GROUPS).forEach(([g, arr]) => arr.forEach((n) => { TASK_GROUP[n] = g; }));
+const groupCollapsed = JSON.parse(localStorage.getItem('sst-groups') || '{}');  // {Event:true} = thu gọn
 
 function t(key) {
   const e = I18N[key];
@@ -239,6 +262,11 @@ function showPage(page, taskName) {
   $('event-settings').classList.toggle('hidden', !isEvent);
   if (isEvent) loadEvent();
 
+  // Cài đặt Event First Clear chỉ hiện khi mở đúng task EventFirstClear
+  const isEfc = page === 'task' && taskName === 'EventFirstClear';
+  $('efc-settings').classList.toggle('hidden', !isEfc);
+  if (isEfc) loadEventFirstClear();
+
   if (page === 'task' && lastState) renderTaskDetail();
   if (page === 'settings') loadConfig();
 }
@@ -271,12 +299,36 @@ function renderLists(s) {
   document.querySelectorAll('[data-setting]').forEach((b) =>
     b.addEventListener('click', () => showPage('task', b.dataset.setting)));
 
-  $('menu-tasks').innerHTML = s.tasks.map((tk) => {
-    const mini = tk.name === s.current && s.state === 'running' ? '▶'
-      : (tk.enable ? (tk.ready ? t('ready') : tk.next_run) : t('off_short'));
-    return `<div class="menu-item ${tk.enable ? '' : 'task-off'}" data-task="${tk.name}">
-      ${label(tk.name)}<span class="mini">${mini}</span></div>`;
-  }).join('');
+  const miniOf = (tk) => tk.name === s.current && s.state === 'running' ? '▶'
+    : (tk.enable ? (tk.ready ? t('ready') : tk.next_run) : t('off_short'));
+  const itemHtml = (tk, child) =>
+    `<div class="menu-item ${child ? 'child' : ''} ${tk.enable ? '' : 'task-off'}" data-task="${tk.name}">
+      ${label(tk.name)}<span class="mini">${miniOf(tk)}</span></div>`;
+
+  let html = '';
+  const doneGroups = new Set();
+  s.tasks.forEach((tk) => {
+    const g = TASK_GROUP[tk.name];
+    if (!g) { html += itemHtml(tk, false); return; }
+    if (doneGroups.has(g)) return;               // các thành viên khác gộp vào lần render đầu của nhóm
+    doneGroups.add(g);
+    const members = s.tasks.filter((x) => TASK_GROUP[x.name] === g);
+    const col = !!groupCollapsed[g];
+    const gname = t('side_group_' + g.toLowerCase());
+    html += `<div class="menu-parent ${col ? 'collapsed' : ''}" data-group="${g}">
+      <span class="caret">▾</span>${gname}</div>
+      <div class="menu-children" data-group-body="${g}"${col ? ' style="display:none"' : ''}>
+      ${members.map((m) => itemHtml(m, true)).join('')}</div>`;
+  });
+  $('menu-tasks').innerHTML = html;
+
+  document.querySelectorAll('#menu-tasks .menu-parent').forEach((p) =>
+    p.addEventListener('click', () => {
+      const g = p.dataset.group;
+      groupCollapsed[g] = !groupCollapsed[g];
+      localStorage.setItem('sst-groups', JSON.stringify(groupCollapsed));
+      renderLists(lastState);
+    }));
   document.querySelectorAll('#menu-tasks .menu-item').forEach((m) => {
     m.addEventListener('click', () => showPage('task', m.dataset.task));
     m.classList.toggle('active', currentPage === 'task' && m.dataset.task === currentTask);
@@ -486,6 +538,30 @@ $('btn-save-event').addEventListener('click', async () => {
   toast(r || t('saved_note'));
   flashSaved('event-saved');
   loadEvent();
+});
+
+// ===== Cài đặt Event First Clear =====
+async function loadEventFirstClear() {
+  if (!window.pywebview) return;
+  const e = await pywebview.api.get_event_first_clear();
+  $('efc-normal').checked = e.normal;
+  $('efc-hard').checked = e.hard;
+  $('efc-challenge').checked = e.challenge;
+  $('efc-max').value = e.max_stages;
+  $('efc-timeout').value = e.run_timeout;
+}
+
+$('btn-save-efc').addEventListener('click', async () => {
+  const r = await pywebview.api.save_event_first_clear({
+    normal: $('efc-normal').checked,
+    hard: $('efc-hard').checked,
+    challenge: $('efc-challenge').checked,
+    max_stages: parseInt($('efc-max').value, 10) || 12,
+    run_timeout: parseInt($('efc-timeout').value, 10) || 180,
+  });
+  toast(r || t('saved_note'));
+  flashSaved('efc-saved');
+  loadEventFirstClear();
 });
 
 function flashSaved(id) {
