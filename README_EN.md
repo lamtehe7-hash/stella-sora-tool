@@ -47,6 +47,18 @@ See full descriptions in [CHANGELOG_EN.md](CHANGELOG_EN.md).
 
 ---
 
+## ❓ Why Android emulator only, not the PC client?
+
+Stella Sora's Windows PC client is **automation-hardened**: the game rejects all *injected* (synthetic)
+clicks, so a tool can read the screen but **cannot press any button**. A full PC backend was built and
+tested (screen capture via WGC works great) but had to be dropped because of this wall. SST therefore
+runs only on an **Android emulator via ADB** — where input is injected at the **OS level**, out of the
+game's reach (same approach as ALAS / StarRailCopilot / MaaStellaSora).
+
+📄 Technical details + how to view the archived code: **[docs/pc-backend-rejected.md](docs/pc-backend-rejected.md)**.
+
+---
+
 ## 🛠️ Run from source (for developers)
 
 ### Install

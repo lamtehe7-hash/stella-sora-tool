@@ -47,6 +47,18 @@ Xem mô tả đầy đủ trong [CHANGELOG_VN.md](CHANGELOG_VN.md).
 
 ---
 
+## ❓ Vì sao chỉ hỗ trợ giả lập Android, không hỗ trợ bản PC?
+
+Bản PC (client Windows) của Stella Sora **chống tự-động-hoá**: game lọc bỏ mọi thao tác click "nhân
+tạo" (injected), nên tool **điều khiển được màn hình nhưng không bấm được nút**. Đã khảo sát & dựng
+thử backend PC (chụp màn hình bằng WGC chạy rất tốt) nhưng phải dừng vì rào cản này. SST vì thế chỉ
+chạy trên **giả lập Android qua ADB** — nơi input được bơm ở **tầng hệ điều hành**, ngoài tầm chặn
+của game (giống ALAS / StarRailCopilot / MaaStellaSora).
+
+📄 Chi tiết kỹ thuật + cách xem lại code đã khảo sát: **[docs/pc-backend-rejected.md](docs/pc-backend-rejected.md)**.
+
+---
+
 ## 🛠️ Chạy từ mã nguồn (cho lập trình viên)
 
 ### Cài đặt
