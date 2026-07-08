@@ -25,6 +25,7 @@ from tasks.login import Login
 from tasks.mail import Mail
 from tasks.purchase_gift import PurchaseGift
 from tasks.shop import Shop
+from tasks.weekly_reward import WeeklyReward
 
 TASKS = {
     'Login': Login,
@@ -40,6 +41,7 @@ TASKS = {
     'Heartlink': Heartlink,  # hẹn hò tăng Affinity (task con Invite + Mail/Delivery) — mặc định TẮT
     'FriendGift': FriendGift,  # trao đổi stamina với bạn (Acquire All + Gift All); TRƯỚC DailyReward
     'DailyReward': DailyReward,  # gần cuối: gom mission + điểm hoạt động SAU khi các task khác xong
+    'WeeklyReward': WeeklyReward,  # sau DailyReward: Claim All tab Weekly Affairs (mission tuần) nếu sáng
     'Cleanup': Cleanup,  # luôn cuối: về home / đóng game
 }
 ORDER = list(TASKS)  # thứ tự khai báo = thứ tự ưu tiên
