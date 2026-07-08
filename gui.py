@@ -14,8 +14,10 @@ from pywebio.output import (put_buttons, put_markdown, put_scope, put_scrollable
 from pywebio.platform.tornado import start_server
 
 from module.config import Config, utcnow
+from module.exception import TaskInterrupted
 from module.logger import gui_log, logger
 from module.scheduler import ORDER, Scheduler, run_single
+from module.stop_signal import request_stop
 
 PORT = 22270
 
@@ -41,11 +43,15 @@ def on_start(_=None) -> None:
 
 
 def on_stop(_=None) -> None:
-    if _scheduler is None or not _scheduler.is_alive():
-        toast('Scheduler không chạy', color='warn')
+    if _scheduler is not None and _scheduler.is_alive():
+        _scheduler.stop()  # set luôn cờ dừng-ngay → ngắt task hiện tại
+        toast('Đang dừng — ngắt task hiện tại...')
         return
-    _scheduler.stop()
-    toast('Sẽ dừng sau khi task hiện tại xong')
+    if _single is not None and _single.is_alive():
+        request_stop()  # 'Chạy ngay' cũng ngắt được
+        toast('Đang ngắt task...')
+        return
+    toast('Scheduler không chạy', color='warn')
 
 
 def on_run_now(name: str) -> None:
@@ -63,6 +69,8 @@ def on_run_now(name: str) -> None:
     def _run():
         try:
             run_single(name)
+        except TaskInterrupted:
+            logger.info(f'{name} bị ngắt theo yêu cầu Dừng của người dùng.')
         except Exception as e:
             logger.error(f'{name} lỗi: {e}')
 

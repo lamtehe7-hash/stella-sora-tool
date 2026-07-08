@@ -22,7 +22,7 @@ def main() -> None:
         try:
             sched.join()
         except KeyboardInterrupt:
-            print('Ctrl+C — dừng sau khi task hiện tại xong...')
+            print('Ctrl+C — ngắt task hiện tại và dừng...')
             sched.stop()
             sched.join()
 

@@ -1,5 +1,20 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.3 (2026-07-08) — pre-release — Nút Dừng ngắt task hiện tại NGAY
+
+### GUI / Scheduler
+- **[Dừng] ngắt task đang chạy ngay lập tức** (tại thao tác chụp/bấm kế tiếp — thường trong vài giây)
+  thay vì chờ task chạy xong. Áp dụng cho cả vòng lặp scheduler **lẫn** nút "Chạy ngay" (1 task);
+  Ctrl+C ở scheduler CLI cũng vậy.
+- Task bị ngắt **không bị phạt lịch**: không ghi error log, không delay thử lại — `next_run` giữ
+  nguyên nên lần Start sau chạy lại từ đầu. Game cũng không bị ảnh hưởng (tool chỉ ngừng bấm; việc
+  dở dang trong game giữ nguyên hiện trạng).
+- Bên trong: cờ dừng toàn cục (`module/stop_signal.py`) được kiểm ở mọi
+  `Device.screenshot/click/click_xy/swipe`, ném `TaskInterrupted` riêng để scheduler xử lý tách biệt.
+  Phiên chạy mới tự xoá cờ khi bắt đầu.
+- **Verify live** (task Mail bị ngắt sau **0.94 giây** bấm Dừng) + 4 case test offline mới
+  (`tests/test_stop_interrupt.py`); bộ test ADB-retry cũ vẫn pass.
+
 ## v0.4.2 (2026-07-08) — pre-release — Run Ascension nhanh hơn ~28%
 
 ### Ascension — tốc độ run

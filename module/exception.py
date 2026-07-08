@@ -20,3 +20,7 @@ class TaskError(Exception):
 
 class RequestHumanTakeover(Exception):
     """Lỗi không tự phục hồi được — dừng tool, cần người can thiệp."""
+
+
+class TaskInterrupted(Exception):
+    """Người dùng bấm [Dừng] — ngắt task tại thao tác thiết bị kế tiếp (không phải lỗi)."""

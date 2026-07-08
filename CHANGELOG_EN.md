@@ -1,5 +1,20 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.3 (2026-07-08) — pre-release — Stop button now interrupts the current task immediately
+
+### GUI / Scheduler
+- **[Stop] interrupts the running task right away** (at the next screenshot/click — typically within
+  a couple of seconds) instead of waiting for the task to finish. Works for the scheduler loop **and**
+  the single-task "Run now" button; Ctrl+C in the CLI scheduler behaves the same way.
+- An interrupted task is **not penalized**: no error log, no retry delay — its schedule stays untouched,
+  so the next Start simply runs it again from the beginning. The game is left untouched too (the tool
+  just stops sending input; anything half-done in-game stays as is).
+- Internals: a global stop flag (`module/stop_signal.py`) checked at every
+  `Device.screenshot/click/click_xy/swipe`, raising a dedicated `TaskInterrupted` that the scheduler
+  handles separately. A new session clears the flag on start.
+- **Verified live** (Mail task interrupted **0.94s** after pressing Stop) + 4 new offline test cases
+  (`tests/test_stop_interrupt.py`); the ADB-retry test suite still passes.
+
 ## v0.4.2 (2026-07-08) — pre-release — Ascension runs ~28% faster
 
 ### Ascension — run speed

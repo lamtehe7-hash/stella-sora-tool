@@ -8,8 +8,9 @@ from module.base.button import set_server
 from module.config import Config, utcnow
 from module.device.device import Device
 from module.exception import (GameStuckError, GameTooManyClickError,
-                              RequestHumanTakeover, TaskError)
+                              RequestHumanTakeover, TaskError, TaskInterrupted)
 from module.logger import logger, save_error_log
+from module.stop_signal import clear_stop, request_stop
 from tasks.ascension import Ascension
 from tasks.bounty_trial import BountyTrial
 from tasks.cleanup import Cleanup
@@ -54,7 +55,9 @@ def run_task(name: str, config: Config, device: Device) -> None:
 
 
 class Scheduler(threading.Thread):
-    """Vòng lặp task chạy nền. stop() dừng SAU khi task hiện tại xong (không ngắt giữa chừng)."""
+    """Vòng lặp task chạy nền. stop() ngắt task hiện tại NGAY (TaskInterrupted tại thao tác
+    thiết bị kế tiếp — xem module/stop_signal.py) rồi dừng vòng lặp; task bị ngắt không bị
+    phạt task_delay nên lần Start sau sẽ chạy lại."""
 
     daemon = True
 
@@ -67,12 +70,14 @@ class Scheduler(threading.Thread):
 
     def stop(self) -> None:
         self._stop_event.set()
+        request_stop()  # ngắt task đang chạy ngay tại screenshot/click kế tiếp
 
     @property
     def stopping(self) -> bool:
         return self._stop_event.is_set()
 
     def run(self) -> None:
+        clear_stop()  # cờ Dừng của phiên trước không được giết phiên này
         try:
             device = Device(Config.load())
             device.connect()
@@ -101,6 +106,10 @@ class Scheduler(threading.Thread):
             try:
                 with device_lock:
                     run_task(name, config, device)
+            except TaskInterrupted:
+                # Người dùng bấm Dừng: không phải lỗi — không save_error_log, không task_delay
+                # (next_run giữ nguyên → lần Start sau chạy lại task dở này).
+                logger.info(f'{name} bị ngắt theo yêu cầu Dừng của người dùng.')
             except TaskError as e:
                 logger.error(f'{name} thất bại: {e} — thử lại sau 30 phút')
                 save_error_log(device)
@@ -127,6 +136,7 @@ class Scheduler(threading.Thread):
 
 def run_single(name: str) -> None:
     """Chạy 1 task rồi thoát (CLI hoặc nút 'Chạy ngay' của GUI khi scheduler không chạy)."""
+    clear_stop()
     config = Config.load()
     set_server(config.server)
     device = Device(config)

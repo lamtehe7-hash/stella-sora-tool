@@ -5,8 +5,9 @@ import cv2
 import numpy as np
 
 from module.device.adb import Adb
-from module.exception import GameTooManyClickError, RequestHumanTakeover
+from module.exception import GameTooManyClickError, RequestHumanTakeover, TaskInterrupted
 from module.logger import logger
+from module.stop_signal import stop_requested
 
 # screencap qua adb shell có thể bị đổi line-ending tùy Android version (bẫy kinh điển ALAS xử lý)
 _PNG_FIXES = (lambda d: d,
@@ -25,10 +26,17 @@ class Device:
     def connect(self) -> None:
         self.adb.connect()
 
+    def _abort_if_stop_requested(self) -> None:
+        # Chokepoint nút [Dừng]: task nào cũng screenshot/click liên tục nên ngắt ở đây
+        # ăn gần như ngay (trễ tối đa ~1 nhịp sleep của task).
+        if stop_requested():
+            raise TaskInterrupted('Người dùng bấm Dừng')
+
     # --- screenshot ---
 
     def screenshot(self) -> np.ndarray:
         """Chụp màn hình, trả về BGR ndarray. Game landscape → ảnh 1280×720 (W×H), tức shape (720, 1280) = (h, w)."""
+        self._abort_if_stop_requested()
         for attempt in range(3):
             img = self._decode(self.adb.screenshot_png())
             if img.shape[:2] == (720, 1280):
@@ -53,6 +61,7 @@ class Device:
     # --- control ---
 
     def click(self, button) -> None:
+        self._abort_if_stop_requested()
         x, y = button.click_point()
         self._click_record.append(button.name)
         self._check_click_record()
@@ -60,6 +69,7 @@ class Device:
         self.adb.tap(x, y)
 
     def click_xy(self, x: int, y: int, name: str = 'RAW') -> None:
+        self._abort_if_stop_requested()
         self._click_record.append(name)
         self._check_click_record()
         logger.info(f'Click {name} @ ({x}, {y})')
@@ -68,6 +78,7 @@ class Device:
     def swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300,
               name: str = 'SWIPE') -> None:
         """Vuốt (cuộn danh sách). Không tính vào click-record chống double-click."""
+        self._abort_if_stop_requested()
         logger.info(f'Swipe {name} ({x1},{y1})->({x2},{y2})')
         self.adb.swipe(x1, y1, x2, y2, duration_ms)
 

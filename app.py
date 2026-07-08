@@ -14,8 +14,10 @@ from module.ascension_analysis import (
     analyze_session, cleanup_images, image_dirs, images_size_bytes, render_report_md,
 )
 from module.config import ROOT, Config, MailTarget, utcnow
+from module.exception import TaskInterrupted
 from module.logger import gui_log, logger
 from module.scheduler import ORDER, Scheduler, run_single
+from module.stop_signal import request_stop
 
 CAPTURE_ROOT = ROOT / 'data' / 'ascension_capture'
 
@@ -39,7 +41,8 @@ MSG = {
     'busy_running':      ('Đang chạy rồi', 'Already running'),
     'sched_started':     ('Đã bắt đầu scheduler', 'Scheduler started'),
     'sched_not_running': ('Scheduler không chạy', 'Scheduler is not running'),
-    'sched_stopping':    ('Sẽ dừng sau khi task hiện tại xong', 'Will stop after the current task'),
+    'sched_stopping':    ('Đang dừng — ngắt task hiện tại...', 'Stopping — interrupting the current task...'),
+    'single_stopping':   ('Đang ngắt task...', 'Interrupting the task...'),
     'task_on':           ('{n}: BẬT', '{n}: ON'),
     'task_off':          ('{n}: TẮT', '{n}: OFF'),
     'run_due':           ('{n}: đến hạn ngay — scheduler sẽ chạy trong vòng lặp',
@@ -110,10 +113,13 @@ class Api:
 
     def stop(self) -> str:
         cfg = Config.load()
-        if _scheduler is None or not _scheduler.is_alive():
-            return _m(cfg, 'sched_not_running')
-        _scheduler.stop()
-        return _m(cfg, 'sched_stopping')
+        if _scheduler is not None and _scheduler.is_alive():
+            _scheduler.stop()  # set luôn cờ dừng-ngay → ngắt task hiện tại
+            return _m(cfg, 'sched_stopping')
+        if _single is not None and _single.is_alive():
+            request_stop()  # 'Chạy ngay' cũng ngắt được
+            return _m(cfg, 'single_stopping')
+        return _m(cfg, 'sched_not_running')
 
     def toggle(self, name: str) -> str:
         cfg = Config.load()
@@ -136,6 +142,8 @@ class Api:
         def _run():
             try:
                 run_single(name)
+            except TaskInterrupted:
+                logger.info(f'{name} bị ngắt theo yêu cầu Dừng của người dùng.')
             except Exception as e:
                 logger.error(f'{name} lỗi: {e}')
 

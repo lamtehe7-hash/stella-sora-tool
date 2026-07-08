@@ -81,7 +81,7 @@ Tool có **3 cách chạy**:
 - **Rail trái**: Home · sst (bảng điều khiển) · Cấu hình.
 - **Home**: đổi **ngôn ngữ VI/EN** và **giao diện Sáng/Tối**.
 - **Bảng điều khiển (sst)**:
-  - Nút **Start** (bắt đầu scheduler tự động) / **Stop** (dừng sau khi task hiện tại xong).
+  - Nút **Start** (bắt đầu scheduler tự động) / **Stop** (ngắt task hiện tại ngay rồi dừng).
   - Danh sách task: **bật/tắt** từng task, nút **Chạy ngay** (đặt task đến hạn tức thì).
   - Các thẻ trạng thái: Scheduler / Đang chạy / Sẵn sàng / Chờ đến hạn.
   - Panel **Log** (Auto Scroll) — theo dõi trực tiếp.
@@ -220,7 +220,9 @@ Redeem Code, v.v.
 - Có thể **treo máy 24/7**: tool tự lặp, chạy đúng giờ, tự phục hồi khi lỗi (chụp log + screenshot).
 - Muốn chạy tay 1 task: bấm **Chạy ngay** (GUI) hoặc `python sst.py <Task>` (CLI).
 
-> Bấm **Stop** sẽ dừng **sau khi** task hiện tại chạy xong (không cắt ngang). Khi đóng app/exe giữa
+> Bấm **Stop** sẽ **ngắt task hiện tại ngay** (tại thao tác chụp/bấm kế tiếp, trễ tối đa vài giây)
+> rồi dừng scheduler. Task bị ngắt **không bị phạt lịch** — lần Start sau sẽ chạy lại từ đầu, game
+> không bị hỏng gì (tool chỉ dừng bấm, mọi thứ dở dang trong game vẫn nguyên). Khi đóng app/exe giữa
 > chừng = kill tiến trình → nên bấm Dừng trước cho gọn.
 
 ---
