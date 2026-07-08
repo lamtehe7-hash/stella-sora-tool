@@ -13,12 +13,16 @@ COMMISSION_CLAIM_ALL_DONE = Button('commission/COMMISSION_CLAIM_ALL_DONE.png',
 # GameTooManyClick, popup kẹt che màn làm mọi task sau fail "không nhận diện page").
 COMMISSION_COMPLETE = Button('commission/COMMISSION_COMPLETE.png', area=(430, 82, 852, 128))
 COMMISSION_BACK = Button('commission/COMMISSION_BACK.png', area=(392, 543, 606, 600))
-# Nút teal "Dispatch Again" (phái lại cả loạt vừa hoàn tất) nằm bên PHẢI nút Back trên bảng Complete,
-# đối xứng gương của Back (tâm ~499) qua tâm popup (x=640) -> tâm ~(781, 571). Bấm bằng toạ độ vì
-# popup Complete chỉ hiện khi có đội về (~20h/lượt) nên chưa crop/verify template được lúc code.
-# An toàn: click lệch trên bảng Complete chỉ trúng vùng trống (không nút nguy hiểm) -> popup không
-# đóng -> tự fallback Back + phái tay (xem _claim_all). CHƯA verify live — chạy ở lần hoàn tất kế.
+# Nút teal "Dispatch Again" trên bảng Complete, bên PHẢI nút Back -> tâm (781, 571).
+# ✅ VERIFY LIVE 2026-07-07: toạ độ (781,571) trúng ĐÚNG nút "Dispatch Again".
+# ⚠️ HÀNH VI (khảo sát live): bấm Dispatch Again LẦN 1 chỉ mở **chuỗi thoại nhân vật** (có nút Skip
+# góc trái-trên) + popup **"Items Obtained!"** (quà bonus) rồi QUAY LẠI bảng Complete — CHƯA phái lại.
+# Phải bấm Dispatch Again **LẦN 2** mới thực sự phái lại đủ 4/4. Giữa các lần bấm, dismiss thoại/quà
+# bằng tap (640,150) ("Select anywhere to continue" / advance thoại — KHÔNG tap Skip (55,48) vì trùng
+# nút Back-arrow khi không có thoại). Xem _claim_all. (Chuỗi 2-lần: chờ live-verify ở lượt hoàn tất kế;
+# an toàn: _redispatch() luôn phái tay lấp slot trống nếu Dispatch Again hụt.)
 COMMISSION_DISPATCH_AGAIN_XY = (781, 571)
+COMMISSION_MAX_AGAIN = 3   # số lần bấm Dispatch Again tối đa trước khi bỏ sang phái tay
 
 # --- Phái lại commission (Dispatch Again), khảo sát 2026-07-05 ---
 # Flow phái 1 commission: chọn commission ở list trái -> Quick Select (tự chọn đội hợp Requirement +
@@ -55,35 +59,39 @@ class Dispatch(UI):
         self.config.task_delay('Dispatch', minutes=240)
 
     def _claim_all(self) -> None:
-        """Claim All -> trên bảng "Commission Complete!" ưu tiên bấm DISPATCH AGAIN (phái lại cả loạt
-        vừa xong); nếu popup không đóng (Dispatch Again không khả dụng) thì đóng bằng Back. Slot còn
-        trống sẽ do _redispatch() điền tay với 20h."""
+        """Claim All -> bảng "Commission Complete!". Bấm DISPATCH AGAIN để phái lại cả loạt. Khảo sát
+        live (2026-07-07): lần bấm ĐẦU chỉ mở chuỗi thoại nhân vật (Skip) + popup "Items Obtained!"
+        (quà bonus) rồi QUAY LẠI bảng Complete — CHƯA phái lại; phải bấm Dispatch Again **lần nữa**
+        mới thực sự phái đủ 4/4. Nên bấm lặp tối đa COMMISSION_MAX_AGAIN lần, dismiss thoại/quà giữa
+        các lần bằng tap (640,150). Cạn lần bấm mà popup vẫn còn -> đóng Back; slot trống còn lại do
+        _redispatch() điền tay với 20h (lưới an toàn)."""
         self.device.click_xy(1160, 633, name='COMMISSION_CLAIM_ALL')
-        tried_again = False
-        end = time.time() + 60
+        again_clicks = 0
+        end = time.time() + 90
         while time.time() < end:
             time.sleep(1.5)
             self.device.screenshot()
             if self.handle_popup():
                 continue
             if self.appear(COMMISSION_COMPLETE):
-                if not tried_again:
-                    # Ưu tiên: phái lại cả loạt bằng "Dispatch Again"
+                if again_clicks < COMMISSION_MAX_AGAIN:
+                    # Bấm "Dispatch Again": lần 1 mở thoại/quà -> quay lại Complete; lần 2 phái lại 4/4.
                     self.device.click_xy(*COMMISSION_DISPATCH_AGAIN_XY, name='DISPATCH_AGAIN')
-                    tried_again = True
-                    time.sleep(3)   # animation "Commission Start!" khi phái lại
+                    again_clicks += 1
+                    logger.info(f'Dispatch: bấm Dispatch Again (lần {again_clicks})')
+                    time.sleep(3)   # animation/thoại "Commission Start!"
                     continue
-                # Đã bấm Dispatch Again mà popup vẫn còn -> không phái lại được -> đóng Back
+                # Bấm đủ số lần mà popup vẫn còn -> đóng Back, để _redispatch phái tay
                 self.device.click(COMMISSION_BACK)
-                logger.info('Dispatch: Dispatch Again không khả dụng — đóng Back, sẽ phái tay')
+                logger.info('Dispatch: Dispatch Again chưa phái đủ — đóng Back, sẽ phái tay')
                 time.sleep(1.5)
                 continue
             if self.appear(COMMISSION_CHECK):
-                logger.info('Dispatch: đã Claim All' + (' + Dispatch Again' if tried_again else ''))
+                logger.info(f'Dispatch: đã Claim All (Dispatch Again x{again_clicks})')
                 return
-            # Popup thưởng khác (không phải modal Commission Complete) -> tap vùng trống đóng
+            # Thoại nhân vật / "Items Obtained" (Select anywhere to continue) -> tap advance/dismiss
             self.device.click_xy(640, 150, name='REWARD_DISMISS')
-        logger.warning('Dispatch: Claim All/Dispatch Again không hoàn tất sau 60s — vẫn thử phái tay')
+        logger.warning('Dispatch: Claim All/Dispatch Again không hoàn tất sau 90s — vẫn thử phái tay')
 
     def _redispatch(self) -> int:
         """Điền các slot commission trống tới đủ 4: mỗi commission available -> Quick Select (tự chọn

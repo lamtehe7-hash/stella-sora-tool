@@ -99,6 +99,11 @@ SAVE_RECORD_SKIP_XY = (66, 37)
 # Nút Confirm teal của dialog trong run: bắt cả biến thể giữa (640,508) lẫn phải (780,508)
 ASC_DIALOG_CONFIRM = Button('common/DIALOG_CONFIRM.png', area=(500, 455, 920, 560),
                             name='ASC_DIALOG_CONFIRM')
+# Dialog "There is an Ascension in progress — Return to Ascension?" (hiện khi vào Ascension lúc có
+# run PAUSE, khảo sát 2026-07-07). "Give Up" (đỏ, ~500,508) = bỏ run dở; "Confirm" (teal, ~780,508)
+# = tiếp tục run. Dùng ASC_GIVE_UP để nhận diện dialog + bỏ run kẹt, bắt đầu run mới sạch.
+ASC_GIVE_UP = Button('ascension/ASC_GIVE_UP.png', area=(378, 470, 620, 545), threshold=0.85,
+                     name='ASC_GIVE_UP')
 
 CARD_X = (295, 640, 985)  # tâm 3 thẻ ở màn chọn thẻ
 CARD_Y = 270  # tap vùng art phía trên thẻ — ripple của tap không che thanh Lv (y~402+)
@@ -110,6 +115,14 @@ SHOP_SLOTS = ((700, 250), (849, 250), (999, 250), (1148, 250),   # kệ trên: P
 SHOP_BUY_XY = (640, 520)       # nút Purchase trong dialog
 SHOP_CLOSE_XY = (935, 191)     # X đóng dialog Purchase
 SHOP_BACK_XY = (66, 37)        # nút back thoát shop UI (CHỈ trên màn shop!)
+# --- Rank band từ MÀU KHUNG badge Record (màn Save Record) — KHÔNG OCR số (font nâu khó + cần đủ 0-9).
+# Khung theo rank (nguồn cộng đồng): silver 1-5 / green 6-10 / blue 11-20 / golden 21-30 / chroma 31-40.
+# Phân loại theo MEDIAN HUE của pixel khung bão hoà. Verify live 2026-07-07: golden hue~17-22,
+# chroma hue~133-137 (tách rõ). silver/green/blue chưa có mẫu trên acc Diff8 (record luôn rank ≥29) —
+# ngưỡng hue đặt theo lý thuyết, cần verify khi gặp record band thấp. RECORD_BADGE_ROI = hexagon màn Save.
+RECORD_BADGE_ROI = (66, 44, 156, 136)
+BAND_ORDER = {'silver': 1, 'green': 2, 'blue': 3, 'golden': 4, 'chroma': 5}
+BAND_NAME = {1: 'silver', 2: 'green', 3: 'blue', 4: 'golden', 5: 'chroma'}
 SHOP_REFRESH_XY = (1220, 633)  # refresh kệ (100 coin) — chỉ dùng ở phòng cuối
 SHOP_DISMISS_XY = (640, 690)   # tap đóng màn "Notes Acquired" (né (66,37) = mở Monolith Bag)
 
@@ -224,6 +237,30 @@ def _read_number(mask, min_h, max_h, min_w=2):
             return None
         digits += str(best_v)
     return int(digits)
+
+
+def read_record_band(img):
+    """Band khung badge rank (1=silver..5=chroma) ở màn Save Record, phân loại theo MÀU KHUNG
+    (median hue của pixel bão hoà) — KHÔNG OCR số. None nếu hue không rơi dải nào (layout lạ)."""
+    x1, y1, x2, y2 = RECORD_BADGE_ROI
+    roi = img[y1:y2, x1:x2]
+    if roi.size == 0:
+        return None
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    colored = (s > 60) & (v > 120)
+    if colored.sum() < 0.12 * roi.shape[0] * roi.shape[1]:
+        return 1                       # rất ít pixel bão hoà -> khung xám/kim loại = silver
+    hue = float(np.median(h[colored]))
+    if 8 <= hue <= 32:
+        return 4                       # golden (vàng)
+    if 33 <= hue <= 92:
+        return 2                       # green
+    if 93 <= hue <= 118:
+        return 3                       # blue
+    if 119 <= hue <= 165:
+        return 5                       # chroma (xanh-tím óng)
+    return None
 
 
 def read_coins(img):
@@ -762,6 +799,7 @@ class Ascension(UI):
         shop_last_done = False  # đã mua ở PHÒNG CUỐI chưa (nhận diện qua nút Leave Monolith;
         #                         cờ riêng vì giữa shop 3-8 và phòng cuối có thể không có
         #                         event/continue nào để reset shop_done)
+        shop_exit_tries = 0     # số lần bấm "go up" mà chưa rời được phòng shop (chống deadlock)
         while time.time() < end:
             img = self.device.screenshot()
             step += 1
@@ -787,9 +825,22 @@ class Ascension(UI):
                 time.sleep(10)
                 continue
 
-            # Màn Record cuối run: lưu record rồi Confirm (dialog "Record Saved").
+            # Màn Record cuối run: (tuỳ chọn) đọc BAND khung rank để quyết định HUỶ record yếu vs lưu.
             # save_record=OFF -> thử rời không lưu; sau 2 lần không thoát thì fallback lưu (né kẹt run).
             if self.appear(SAVE_RECORD):
+                if getattr(self.cfg, 'dissolve_record', False):
+                    band = read_record_band(img)
+                    thr = BAND_ORDER.get(getattr(self.cfg, 'dissolve_max_band', 'silver'), 1)
+                    to_discard = band is not None and band <= thr
+                    logger.info(f"Ascension: Record khung={BAND_NAME.get(band, '?')}(band {band}) | "
+                                f"ngưỡng rã ≤ {getattr(self.cfg, 'dissolve_max_band', 'silver')} -> "
+                                f"{'ĐỦ ĐK HUỶ' if to_discard else 'GIỮ'}")
+                    if to_discard:
+                        # ⚠️ Luồng HUỶ (bấm thùng rác ~448,655 + dialog confirm) CHƯA khảo sát/verify live.
+                        # FAIL-SAFE: LƯU tạm để KHÔNG mất data. Bật huỷ thật sau khi crop RECORD_DISCARD
+                        # + map dialog confirm + test giám sát (xem docs/game-map.md ▸ records).
+                        logger.warning('Ascension: record đủ điều kiện HUỶ nhưng luồng huỷ chưa verify '
+                                       'live -> LƯU tạm (fail-safe, không mất data).')
                 if self.cfg.save_record or save_tries >= 2:
                     logger.info('Ascension: Save Record')
                     self.device.click_xy(*SAVE_RECORD.last_match, name=f'ASC_SAVE_{suffix}')
@@ -821,7 +872,10 @@ class Ascension(UI):
                 continue
 
             # Phòng Shop (Trade Domain / phòng cuối): mua chiến lược + enhance trọn gói 1 lần
-            if self.appear(SHOP_PURCHASE):
+            at_shop_opts = self.appear(SHOP_PURCHASE)
+            if not at_shop_opts:
+                shop_exit_tries = 0          # không ở màn options shop -> reset guard deadlock
+            if at_shop_opts:
                 last_room = self.appear(LEAVE_MONOLITH)
                 if not (shop_last_done if last_room else shop_done):
                     self._do_shop_room(last_room=last_room)
@@ -829,16 +883,23 @@ class Ascension(UI):
                         shop_last_done = True
                     else:
                         shop_done = True
-                    last_evt, evt_repeat = None, 0
+                    last_evt, evt_repeat, shop_exit_tries = None, 0, 0
                     time.sleep(2)
                     continue
                 # Đã xong phòng này -> rời đi
                 if self.appear(LEAVE_MONOLITH):
                     logger.info('Ascension: shop + enhance xong — Leave Monolith')
                     self.device.click_xy(*LEAVE_MONOLITH.last_match, name=f'ASC_LEAVE_{suffix}')
+                    shop_exit_tries = 0
                 else:
-                    logger.info('Ascension: shop + enhance xong — đi tiếp')
-                    self._handle_event_choice(img, suffix)  # option cuối: "Nah, let's go up"
+                    # RỜI phòng shop = bấm ĐÚNG option cuối "Nah, let's go up right away" (lên tầng).
+                    # KHÔNG dùng _handle_event_choice: smart_event_choice chọn nhầm option item-free
+                    # "Purchase at the shop" -> mở lại shelf -> deadlock shelf<->options (bug 2026-07-07).
+                    self._leave_shop_room(img, suffix)
+                    shop_exit_tries += 1
+                    if shop_exit_tries >= 10:
+                        raise TaskError('Ascension: kẹt phòng shop, không rời được sau 10 lần '
+                                        '"go up" — dừng tránh treo run (kiểm tra lại option shop)')
                 last_evt, evt_repeat = None, 0
                 time.sleep(3)
                 continue
@@ -1231,6 +1292,18 @@ class Ascension(UI):
         self.device.click_xy(*target, name=f'ASC_EVT_{suffix}')
         logger.info(f'Ascension: event {len(opts)} option -> y={target[1]} ({why})')
         return target
+
+    def _leave_shop_room(self, img, suffix: int) -> None:
+        """Rời phòng shop đã mua xong: bấm option CUỐI "Nah, let's go up right away" (lên tầng).
+        Dùng thay _handle_event_choice — smart_event_choice chọn nhầm "Purchase at the shop"
+        (item-free tag) làm mở lại shelf -> deadlock shelf<->options (bug 2026-07-07)."""
+        opts = event_options(img)
+        if opts:
+            x, y = opts[-1]                  # option dưới cùng = "Nah, let's go up right away"
+        else:
+            x, y = 625, 517                  # fallback: toạ độ option dưới cùng màn shop options
+        self.device.click_xy(x, y, name=f'ASC_GOUP_{suffix}')
+        logger.info(f'Ascension: rời phòng shop — "Nah, let\'s go up" (y={y})')
 
     def _recommend_xs(self, img) -> list:
         """Toạ độ x các ribbon 👍 Recommended (gộp cụm >60px), trái -> phải."""

@@ -30,3 +30,7 @@ HANDOVER.md
 
 # Gói phát hành đóng cục bộ (zip lớn — tải lên GitHub Releases thủ công)
 releases/
+
+# Data capture cho nghiên cứu (ảnh + log, KHÔNG đẩy lên GitHub)
+/data/ascension_capture/
+/data/heartlink_survey/

@@ -31,7 +31,10 @@ MAIL_ENTER = Button('home/MAIL_ENTER.png', area=(1121, 5, 1201, 78))
 # + threshold 0.80 -> bất biến có/không chấm đỏ (đo: home 1.000, friend_profile 0.251).
 FRIEND_ENTER = Button('home/FRIEND_ENTER.png', area=(1046, 4, 1126, 80), threshold=0.80)
 MISSIONS_ENTER = Button('home/MISSIONS_ENTER.png', area=(905, 88, 1012, 172), threshold=0.80)
-HEARTLINK_ENTER = Button('home/HEARTLINK_ENTER.png', area=(992, 90, 1090, 168))
+# HEARTLINK_ENTER: re-crop icon-only (2 bong bóng chat, né CHẤM ĐỎ góc phải-trên) + threshold 0.80
+# (2026-07-08) — template cũ dính nền art Home nên vỡ khi đổi nhân vật nổi bật (đo 0.825<0.85 trên 'W').
+# Icon-only -> bất biến nền (đo home hiện 1.00). Cùng lý do SHOP/MISSIONS/PURCHASE.
+HEARTLINK_ENTER = Button('home/HEARTLINK_ENTER.png', area=(992, 78, 1086, 152), threshold=0.80)
 COMMISSION_ENTER = Button('home/COMMISSION_ENTER.png', area=(1168, 90, 1268, 168))
 # PURCHASE_ENTER (hàng icon 2 ở home, giữa Heartlink và Commission): crop icon xe-đẩy opaque, né
 # CHẤM ĐỎ góc phải-trên + threshold 0.80 (nền art đổi theo nhân vật) — cùng lý do SHOP/MISSIONS.
@@ -48,7 +51,9 @@ MENU_CLOSE = Button('menu/MENU_CLOSE.png', area=(1186, 8, 1260, 82))
 # --- Go hub / Bounty / Ascension (khảo sát 2026-07-04 tối) ---
 # Go hub + Bounty hub là UI "điện thoại": KHÔNG có chrome chuẩn, thoát bằng nút nhà riêng (142,42).
 # Trang Basic Trial + Ascension lại có chrome chuẩn (GOTO_HOME 377,42).
-GO_ENTER = Button('home/GO_ENTER.png', area=(1065, 575, 1250, 710))
+# GO_ENTER: re-crop 2026-07-07 phần opaque (xe van + "Go") — template cũ dính nền art Home nên vỡ
+# khi đổi nhân vật nổi bật (đo 0.30 trên nhân vật 'W'). threshold 0.75 (nút bán trong suốt, rìa lọt nền).
+GO_ENTER = Button('home/GO_ENTER.png', area=(1055, 570, 1255, 715), threshold=0.75)
 GO_CHECK = Button('go/GO_CHECK.png', area=(680, 420, 880, 515))  # label "Ascension" trên card
 GO_HUB_HOME = Button('go/GO_HUB_HOME.png', area=(98, 0, 188, 86))
 BOUNTY_ENTER = Button('go/BOUNTY_ENTER.png', area=(905, 145, 1095, 220))

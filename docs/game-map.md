@@ -86,10 +86,37 @@ graph LR
 ### friend — task FriendGift
 - Tab trái: Profile / **Friend List** / Add Friend. Quà động lực nằm trong Friend List — cần khảo sát sâu tab này (nút nhận & gửi hàng loạt).
 
-### heartlink — task Invite + HeartlinkGift
-- UI điện thoại: tab đáy **Chat (148,653) / Invite (273,653) / Mail-phone (398,653)**.
-- Chat: danh sách contact, chấm đỏ = có tương tác chờ; "Select contacts to increase Affinity".
-- Invite: 5 lượt mời hẹn/ngày (theo MaaStellaSora dùng custom action lặp) — khảo sát sâu khi làm task.
+### heartlink — task Heartlink (con Invite ✅ + Mail ✅) — khảo sát live 2026-07-08
+- UI điện thoại: vào bằng `HEARTLINK_ENTER` (icon 2 bong bóng chat, ~1040,120), thoát bằng nút nguồn
+  `HEARTLINK_EXIT` (1220,50). Tab đáy: **Chat (155,653) / Invite (288,653) / Mail (397,653)**. Mở mặc
+  định vào **Chat**. `HEARTLINK_CHECK` (tab bar) chỉ match khi Chat được chọn (không match tab Invite).
+- **Invite** (`HL_INVITE_TITLE` xác nhận): lưới portrait NV **3 cột** — cột x=(147,272,399), hàng
+  y=(232,388,543) (còn hàng dưới, cuộn — chưa làm). Panel phải: header NV (tên/Affinity/Special Memory)
+  + nút **Invite (894,647)**. **"Invited Today: N/5"** góc phải-dưới (giới hạn 5 lượt/ngày).
+- **Trạng thái NV** (panel render có LAG → poll tới khi rõ): `HL_INVITE_BTN` teal "Invite" = còn hẹn được;
+  `HL_INVITED_TODAY` xám "Invited Today" = đã hẹn hôm nay (portrait có **✓ xanh** góc trên).
+- **1 lượt hẹn**: Invite (894,647) → **"Select Date Location"** (`HL_SELECT_LOCATION`; 3 ô KHÁC nhau theo
+  NV) → tap **ô ĐẦU Select (1131,263)** → animation xe chạy → **màn hẹn hò** (nền địa điểm + text box +
+  cụm nút góc phải-trên: clock/replay/play/**Skip ▶| (1189,78)**) → bấm Skip tua nhanh (revealed text +
+  "Connecting..." → tự tới cuối) → cuối buổi hiện **"Send Gift (983,519) / Leave (983,592)"**
+  (`HL_SEND_GIFT`; "This marks the end of an amazing day").
+- **Gift**: Send Gift → lưới quà 5 cột (mỗi item mặt 😄/🙂/😐 = độ thích; **"Gift Limit 1"**) → chọn **ô
+  đầu (798,300)** (loved, +affinity preview) → **Send Gift (1097,635)** → reaction → **"Gifts Received!"**
+  (đáp lễ, "Select anywhere to continue") → **"<NV> Affinity UP"** → tap về Invite (+1/5). `HL_GIFT_NEVERMIND`
+  nhận biết lưới quà; dismiss overlay = tap (640,150).
+- **Cap ngày**: ở 5/5, chọn NV chưa hẹn vẫn có nút Invite active nhưng bấm KHÔNG mở Location (chỉ toast) →
+  task coi là cap → dừng. Skip ▶| KHÔNG dính dialog "leaving early" (khớp affinity đầy đủ, không phạt).
+- **Ưu tiên theo tên** (`invite_targets`): lưới thứ tự CỐ ĐỊNH (NV đã hẹn KHÔNG bị đẩy xuống) → grid-order
+  luôn chọn top; favorite ở dưới phải **cuộn tìm portrait** (`assets/en/heartlink/chars/<slug>.png`,
+  match cv2 vùng lưới (95,178,460,700); swipe 270:520↔300 cuộn). Roster 18+ NV → chỉ crop favorite.
+- **Mail = "Delivery Service"** (gửi quà tăng affinity, **10 quà/ngày GLOBAL** — Fuyuka cũng 10/10): tab
+  Mail (397,653) → list NV bên trái (affinity+địa chỉ; NV trên cùng ~275,218) → panel phải "Delivery
+  Service" (`HL_MAIL_TITLE`) + lưới quà (ô đầu 694,325) + **Send Gift** (893,646) + "Gifts Sent Today N/10".
+  Chọn NV → tap ô quà đầu (loved) → Send Gift → dismiss reaction/"Affinity UP" (tap 640,150) → lặp.
+  Cap-detect: thanh Affinity (755-1090, 198-224) đứng yên sau gửi = 10/10. Config: `mail_count`,
+  `mail_targets` (name+qty; rỗng=dồn NV trên cùng). ⚠️ Send loop chưa verify (10/10 lúc build).
+- Còn nợ: **Mail send loop verify sau reset**; crop portrait list Mail (nhỏ hơn lưới Invite) cho custom
+  name; crop portrait từng favorite; dialog "leaving early" (chưa gặp khi Skip).
 
 ### go (hub, UI điện thoại) — khảo sát 2026-07-04 tối
 - Check: `GO_CHECK` = label "✦ Ascension ✦" trên card lớn (click chính nó để vào Ascension).
@@ -123,6 +150,51 @@ graph LR
 - Dialog Confirm trong run bắt bằng `ASC_DIALOG_CONFIRM` (common/DIALOG_CONFIRM, area rộng bắt cả Confirm giữa 640,508 lẫn phải 780,508).
 - Run Quick Battle + Brief thực đo **~4 phút** không shop, **~8-12 phút** kèm mua sắm 3-4 phòng shop; timeout task 40 phút. Driver khảo sát: `dev_tools/monolith_driver.py` (v2, 👍 trái nhất), `dev_tools/shop_survey.py` (v3, dừng ở shop/enhance), validate parser: `dev_tools/validate_lv_parser.py` + `dev_tools/validate_shop_parser.py` (OCR coin/giá/SALE/Sold Out/panel cần-thiết), smoke: `dev_tools/smoke_ascension_v2.py`, build template số: `dev_tools/build_coin_digits.py`.
 - Daily mission "Participate in Ascension 1 time" — task chạy 1 run/ngày, `server_reset`.
+
+### records = màn Records + Dismantle (rã Record → Journey Ticket Stub) — khảo sát live 2026-07-07
+- **Vào**: Home → **Go** (van, ~1195,655) → Ascension hub (UI điện thoại) → nút **Records** (~715,585,
+  icon quân cờ, dưới tile Ascension; cạnh nút **Preset** ~835,585). Hub còn: Ascension (tile lớn), Bounty
+  Trial, Menace Arena, Proving Grounds, Cataclysm Survivor, Boss Blitz.
+- **Màn Records**: lưới card (2 hàng × 4 cột/trang, cuộn dọc). Mỗi card: **badge lục giác góc trên-trái =
+  RANK Record** (số ~30-40; §4 rank tối đa 40; màu badge theo tier, một số gold) + tên + **icon khoá góc
+  trên-phải** (record khoá KHÔNG rã được) + Trekkers (Main/Support, mỗi cái có số +N) + Main Discs. Góc
+  phải-trên: **"N/100"** (số record/sức chứa) · **"Dismantle"** (pill đỏ ~985,42) · "Bonus Overview".
+  Dưới-phải: sort **"Last Saved" / "Rating"** + filter (⇒ có thể sort Rating để record rank thấp lên đầu).
+- **Chế độ Dismantle** (bấm "Dismantle" ~985,42) → thanh dưới hiện:
+  - dropdown **tier** (mặc định "Master and below", ~145,630) → mở ra 4 mức: **Average / Advanced / Expert
+    / Master and below** = rã theo **BAND rank**, KHÔNG theo số rank chính xác.
+  - **"Select All Filtering"** (~130,682): tự chọn mọi record ≤ tier đã chọn (bỏ record khoá).
+  - **"Selected N/20"** (tối đa **20/lượt**) · **"Close"** (~905,670, huỷ, KHÔNG rã) · **"Dismantle"** (đỏ
+    ~1140,670, XÁC NHẬN).
+  - Record được chọn có **viền đỏ**; preview thưởng **"Can Receive: Journey Ticket Stub ×N"** giữa-dưới
+    (test live: "Master and below" chọn **5/20** → **×367 stub**; các record rank 32-33 KHÔNG được chọn ⇒
+    nằm trên tier Master ⇒ tier là band rank thật, không phải "chọn tất").
+- **⚠️ THIẾT KẾ**: game rã hàng loạt theo **TIER** (Average..Master), KHÔNG có bộ lọc "rank ≤ số N" chính
+  xác. ⇒ tool nên cho chọn **tier** thay vì nhập số level, HOẶC OCR badge rank + tap-chọn từng record ≤ N
+  (max 20/lượt, bỏ record khoá) — xem đề xuất ở docs/ascension-improvements.md.
+- **Chưa khảo sát** (giữ Record thật, KHÔNG bấm confirm): dialog xác nhận sau nút Dismantle cuối; tap-chọn
+  thủ công từng record; map chính xác tier↔rank. Ảnh: `screenshots/raw/dissolve_record/01_home..07_after_close`.
+  Asset cần crop khi code: `RECORDS_ENTER` (hub), `DISMANTLE_BTN`, dropdown tier, `SELECT_ALL_FILTERING`,
+  `DISMANTLE_CONFIRM`.
+- **★ Màn Save Record (cuối run) = quyết định LƯU vs HUỶ ngay theo rank** (khảo sát live 2026-07-07, frame
+  `data/ascension_capture/20260707_140335/run_01/0366`): màn "Unnamed Record" hiện **badge RANK** góc
+  trên-trái (số nâu đậm trên hexagon vàng, ~x82-127, y65-95, cao ~30px — **FONT KHÁC digit coin** → cần
+  template rank riêng để OCR) + **Score** (vd "8670") + Trekkers/Discs. Nút: **Save Record** (teal
+  ~1137,655) = lưu; **icon thùng rác** (~448,655) = **HUỶ** (không lưu → không tích record rác); **Locked**
+  (~116,662) + **Favorite** (~272,662). ⇒ Cách SẠCH nhất để "rã record yếu": tại đây OCR rank → rank ≤
+  ngưỡng thì bấm thùng rác (huỷ), else Save Record. KHÔNG cần vào Records/Dismantle sau (tránh tích rác).
+- **Record Details** (tap 1 record trong list; frame `screenshots/raw/dissolve_record/` + khảo sát
+  2026-07-07): layout GIỐNG màn Save (rank badge + Score + Trekkers/Discs + Locked/Favorite) nhưng nút góc
+  phải-trên = **"🗑️ Dismantle"** (~1163,42) rã 1 record đã lưu. Dialog confirm CHƯA khảo (KHÔNG rã record
+  thật để giữ data).
+- **Nhận rank bằng MÀU KHUNG (không OCR số)**: khung silver(rank1-5)/green(6-10)/blue(11-20)/golden(21-30)/
+  chroma(31-40) — nguồn cộng đồng. `tasks/ascension.py::read_record_band` phân loại theo **median hue** pixel
+  khung bão hoà (ROI badge màn Save `(66,44,156,136)`): **golden hue~17-22, chroma hue~133-137** (verify đúng
+  6/6 badge thật 2026-07-07). silver/green/blue chưa có mẫu (acc Diff8 record luôn rank ≥29). Config
+  `dissolve_max_band` (silver|green|blue|golden) → huỷ nếu band ≤ ngưỡng.
+- **Còn nợ để bật tự-huỷ THẬT**: (1) crop asset thùng rác `RECORD_DISCARD` (~448,655 màn Save); (2) khảo sát
+  **dialog confirm** sau thùng rác (**PHÁ HỦY** — cần permission + 1 record throwaway); (3) bật + test giám
+  sát. **Fail-safe hiện tại**: đủ ĐK huỷ nhưng chưa verify → **vẫn LƯU** + log (không bao giờ mất data).
 
 ### menu (overlay)
 - Achievement / Material Crafting / Trekker Encyclopedia / Settings / **Daily Check-in (884,417)** / Change Appearance / News / Support / Redeem Code.

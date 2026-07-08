@@ -18,7 +18,8 @@ EPOCH = datetime(2020, 1, 1)
 #   BountyTrial — tiêu Vigor, người chơi tự quyết có tiêu vào Trial hay không.
 #   EventDaily  — sự kiện theo đợt, cần crop banner + set stage mỗi đợt trước khi bật.
 #   EventFirstClear — như EventDaily: sự kiện theo đợt + tốn Vigor đánh thật từng stage.
-DEFAULT_OFF_TASKS = {'Ascension', 'BountyTrial', 'EventDaily', 'EventFirstClear'}
+#   Heartlink — task mới (hẹn hò Affinity), tốn item quà khi bật send_gift → để người chơi chủ động bật.
+DEFAULT_OFF_TASKS = {'Ascension', 'BountyTrial', 'EventDaily', 'EventFirstClear', 'Heartlink'}
 
 
 def utcnow() -> datetime:
@@ -101,6 +102,16 @@ class AscensionConfig(BaseModel):
     skip_when_capped: bool = True
     brief_mode: bool = True                    # bật Brief (rút gọn mô tả thẻ, chạy nhanh hơn)
     save_record: bool = True                   # cuối run lưu Record (giữ setup cho Quick Battle sau)
+    # --- Rã Record yếu ngay tại màn Save cuối run (hướng SCORE / dọn Record) ---
+    # MẶC ĐỊNH TẮT (giữ mọi Record tái dùng POWER). Bật: tại màn Save Record đọc BAND khung badge rank
+    # rồi HUỶ (bấm thùng rác, không lưu) nếu band <= dissolve_max_band, else Save. KHÔNG OCR số — phân
+    # loại theo MÀU KHUNG (khảo sát live 2026-07-07, docs/game-map.md ▸ records):
+    #   silver 1-5 / green 6-10 / blue 11-20 / golden 21-30 / chroma 31-40.
+    # 'silver' = chỉ rã khung bạc yếu nhất; 'golden' = rã tới hết golden (giữ chroma). chroma luôn giữ.
+    # ⚠️ Bước HUỶ (thùng rác + dialog confirm) chưa verify live -> hiện FAIL-SAFE: vẫn LƯU + log ý định,
+    # không mất data; bật huỷ thật sau khi khảo sát dialog confirm + test giám sát.
+    dissolve_record: bool = False
+    dissolve_max_band: str = 'silver'          # silver|green|blue|golden — rã record có band <= mức này
     run_timeout: int = 2400                    # thời gian tối đa 1 run (giây)
 
 
@@ -149,6 +160,40 @@ class EventFirstClearConfig(BaseModel):
     run_timeout: int = 180     # thời gian tối đa 1 trận (giây) — Auto-Battle tự bật khi phát hiện OFF
 
 
+class MailTarget(BaseModel):
+    """1 dòng cấu hình Mail custom: gửi `qty` quà cho NV `name` (khớp portrait)."""
+    name: str = ''
+    qty: int = 0
+
+
+class HeartlinkConfig(BaseModel):
+    """Tuỳ chọn task Heartlink (tăng Affinity qua "điện thoại" Heartlink). 2 task con: Invite + Mail.
+
+    INVITE (hẹn hò): mỗi ngày hẹn ≤5 NV. Mỗi lượt: chọn NV → Invite → Select Date Location (ô ĐẦU)
+    → Skip ▶| tua nhanh → Send Gift (x2 Affinity) / Leave → dismiss → về Invite. NV đã hẹn có ✓ xanh.
+    MAIL (Delivery Service): gửi quà cho NV tăng Affinity, giới hạn 10 quà/ngày (GLOBAL). Mặc định dồn
+    cho NV trên cùng list; hoặc custom (name,qty) khớp portrait.
+    """
+    # --- Bật/tắt 2 task con ---
+    do_invite: bool = True
+    do_mail: bool = True
+    # --- Invite ---
+    # Số lượt Invite mỗi ngày (game giới hạn 5/ngày). Tool tự dừng khi hết NV khả dụng / đạt 5/5.
+    invite_count: int = 5
+    # Tặng quà cuối buổi hẹn (x2 Affinity, tốn 1 item/lượt). BỎ TICK = chỉ Leave. Chọn Ô QUÀ ĐẦU (loved).
+    send_gift: bool = True
+    # Ưu tiên hẹn NV này TRƯỚC (khớp portrait `assets/en/heartlink/chars/<slug>.png`, cuộn lưới tìm);
+    # rồi grid-order lấp cho đủ. Chưa có ảnh portrait → bỏ tên đó (lưới thứ tự cố định nên favorite ở
+    # dưới không tới lượt nếu không dùng field này).
+    invite_targets: list[str] = Field(default_factory=list)
+    # --- Mail (Delivery Service) ---
+    # Tổng số quà gửi mỗi ngày (game giới hạn 10/ngày GLOBAL). 1..10.
+    mail_count: int = 10
+    # Custom: gửi qty quà cho từng NV (khớp portrait), tổng ≤ mail_count & ≤10; tên không thấy → bỏ.
+    # RỖNG = mặc định: dồn hết mail_count quà cho NV TRÊN CÙNG danh sách Mail.
+    mail_targets: list[MailTarget] = Field(default_factory=list)
+
+
 class Config(BaseModel):
     emulator: EmulatorConfig = Field(default_factory=EmulatorConfig)
     server: str = 'en'
@@ -163,6 +208,7 @@ class Config(BaseModel):
     bounty: BountyConfig = Field(default_factory=BountyConfig)
     event: EventConfig = Field(default_factory=EventConfig)
     event_first_clear: EventFirstClearConfig = Field(default_factory=EventFirstClearConfig)
+    heartlink: HeartlinkConfig = Field(default_factory=HeartlinkConfig)
     tasks: Dict[str, TaskSettings] = Field(default_factory=dict)
 
     @classmethod

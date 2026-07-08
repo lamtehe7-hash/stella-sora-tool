@@ -1,5 +1,40 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.0 (2026-07-08) — pre-release — Heartlink hẹn hò + Ascension ổn định + phân tích capture
+
+### Task mới: Heartlink (hẹn hò → Affinity)
+- **`Heartlink`** — tăng **Affinity** nhân vật qua UI "điện thoại" trong game. 2 task con bật/tắt riêng
+  bằng `do_invite` / `do_mail`:
+  - **Invite** (≤5/ngày): chọn NV → **Invite** → xác nhận dialog **Start Invitation** → **Select Date
+    Location** → **Skip** buổi hẹn → **Send Gift** (x2 Affinity) / **Leave** → về. NV đã hẹn (nút xám
+    "Invited Today") tự bỏ qua; chạm cap ngày thì dừng.
+  - **Mail / Delivery Service** (10 quà/ngày, dùng chung): gửi quà tăng Affinity — chọn NV → quà →
+    **Send Gift** → lặp. Cap nhận biết khi thanh Affinity ngừng đổi.
+  - `invite_count` (5), `send_gift` (bật), `invite_targets` (ưu tiên NV yêu thích theo tên qua khớp
+    portrait); `mail_count` (10), `mail_targets` (tên+số lượng, rỗng = dồn hết cho NV trên cùng).
+- **Giao diện**: trang Heartlink 2 card (Invite + Mail).
+- **Mặc định TẮT** (task mới + tốn quà khi `send_gift`).
+
+### Ascension — độ ổn định & phân tích
+- **Retry/reconnect ADB** (`module/device/adb.py`, backoff 2/5/10s, tự kết nối lại) — sửa lỗi rớt ADB
+  giữa chừng (nguyên nhân DUY NHẤT làm chết phiên capture dài).
+- **Sửa deadlock phòng shop** — rời shop bằng đúng option "Nah, let's go up" (không mở lại shelf); trụ
+  26 run liên tục.
+- **Sửa nav Home→Ascension** — re-crop `GO_ENTER` (art Home đổi theo nhân vật nổi bật).
+- **Dialog "Return to Ascension?"** (`ASC_GIVE_UP`) xử lý khi có run đang tạm dừng.
+- **Huỷ Record yếu tại màn Save** (mặc định TẮT) — quyết định giữ/huỷ theo **màu khung** badge rank
+  (`dissolve_record`, `dissolve_max_band`), không OCR.
+- **Phân tích phiên capture** (tính năng người dùng, KHÔNG cần AI): chọn phiên → xem chỉ số (mua/enhance/
+  coin/thời gian) → xuất báo cáo → dọn ảnh giải phóng ổ. Engine `module/ascension_analysis.py`.
+
+### Dispatch
+- **Sửa "Dispatch Again" 2 bước** — bấm lần 1 chỉ mở thoại + popup quà; bấm tối đa `COMMISSION_MAX_AGAIN`
+  lần, dismiss giữa các lần, rồi fallback phái tay đủ 4/4.
+
+### Dev tools
+- `dev_tools/ascension_capture.py` (capture frame+log), `analyze_capture.py` (phân tích offline),
+  `rebuild_digits.py` (gộp glyph OCR hụt vào template).
+
 ## v0.3.0 (2026-07-07) — pre-release — nhóm Event + task Event First Clear
 
 ### Task mới: Event First Clear

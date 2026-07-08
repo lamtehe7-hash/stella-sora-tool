@@ -192,12 +192,35 @@
             <span data-i18n="lbl_brief">Bật Brief mode (chạy nhanh)</span></label>
           <label class="check-row"><input id="asc-save" type="checkbox">
             <span data-i18n="lbl_saverec">Lưu Record cuối run</span></label>
+          <label class="check-row"><input id="asc-dissolve" type="checkbox">
+            <span data-i18n="lbl_dissolve">Huỷ Record yếu tại màn Save (không lưu record rác)</span></label>
+          <label class="set-row" id="asc-dissolve-band-row"><span data-i18n="lbl_dissolve_band">Huỷ record có khung ≤</span>
+            <select id="asc-dissolve-band">
+              <option value="silver" data-i18n="opt_band_silver">Silver (rank 1–5)</option>
+              <option value="green" data-i18n="opt_band_green">Green (rank 6–10)</option>
+              <option value="blue" data-i18n="opt_band_blue">Blue (rank 11–20)</option>
+              <option value="golden" data-i18n="opt_band_golden">Golden (rank 21–30)</option>
+            </select></label>
+          <p class="hint" data-i18n="hint_dissolve">Mặc định TẮT (giữ mọi Record để tái dùng POWER). Bật: tại màn Save cuối run, đọc MÀU KHUNG badge rank (silver 1–5 / green 6–10 / blue 11–20 / golden 21–30 / chroma 31–40) — record có khung ≤ mức chọn sẽ bị HUỶ (không lưu), chroma luôn giữ. ⚠️ Bước bấm huỷ là thao tác PHÁ HỦY chưa verify live — hiện FAIL-SAFE (vẫn LƯU + log, không mất data) tới khi khảo sát dialog confirm + test có giám sát.</p>
           <label class="set-row"><span data-i18n="lbl_timeout">Thời gian tối đa 1 run (giây)</span>
             <input id="asc-timeout" type="number" min="300" max="7200"></label>
           <div class="task-actions">
             <button id="btn-save-asc" class="btn btn-primary" data-i18n="btn_save_asc">Lưu cài đặt Ascension</button>
             <span id="asc-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
           </div>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="an_grp">Phân tích phiên capture</span></div>
+          <p class="hint" data-i18n="an_hint">Đọc data phiên nghiên cứu (ảnh + log) và tính chỉ số — thuần cục bộ, không cần mạng/AI.</p>
+          <label class="set-row"><span data-i18n="an_session">Phiên</span>
+            <select id="asc-an-session"></select></label>
+          <div class="task-actions">
+            <button id="btn-asc-analyze" class="btn btn-primary" data-i18n="btn_analyze">Phân tích</button>
+            <button id="btn-asc-export" class="btn btn-ghost" data-i18n="btn_export">Xuất báo cáo</button>
+            <button id="btn-asc-cleanup" class="btn btn-danger" data-i18n="btn_cleanup">Dọn ảnh (giải phóng ổ)</button>
+          </div>
+          <div id="asc-an-result" class="an-result hidden"></div>
         </section>
       </div>
 
@@ -272,6 +295,40 @@
             <span id="efc-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
           </div>
         </section>
+      </div>
+
+      <!-- Cài đặt riêng cho Heartlink (chỉ hiện khi mở task Heartlink) -->
+      <div id="heartlink-settings" class="hidden">
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_hl_invite">Hẹn hò (Invite)</span></div>
+          <label class="check-row"><input id="hl-do-invite" type="checkbox">
+            <span data-i18n="lbl_hl_do_invite">Bật hẹn hò (Invite)</span></label>
+          <label class="set-row"><span data-i18n="lbl_hl_count">Số lượt hẹn mỗi ngày (tối đa 5)</span>
+            <input id="hl-count" type="number" min="1" max="5"></label>
+          <label class="check-row"><input id="hl-gift" type="checkbox">
+            <span data-i18n="lbl_hl_gift">Tặng quà cuối buổi hẹn (x2 Affinity)</span></label>
+          <label class="set-row"><span data-i18n="lbl_hl_targets">Ưu tiên hẹn (tên NV, cách nhau dấu phẩy)</span>
+            <input id="hl-targets" type="text" placeholder="Nazuna, Wraith, ..."></label>
+          <p class="hint" data-i18n="hint_hl_targets">Hẹn các NV này TRƯỚC (dù nằm sâu trong lưới), rồi grid-order lấp cho đủ. ⚠️ Cần có ảnh portrait NV trong <code>assets/en/heartlink/chars/</code> — hiện chỉ có NV đã crop; báo Claude thêm tên nếu muốn. Chưa có ảnh → bỏ qua tên đó.</p>
+          <p class="hint" data-i18n="hint_hl">Mỗi ngày tự hẹn tối đa 5 nhân vật (duyệt lưới trái→phải, trên→dưới; bỏ qua ai đã hẹn hôm nay). Mỗi lượt: Invite → chọn địa điểm ĐẦU → tua nhanh buổi hẹn (Skip) → (tuỳ chọn) tặng quà ô đầu (tốn 1 quà, +2x Affinity).</p>
+        </section>
+
+        <section class="card settings-group">
+          <div class="card-head"><span class="card-title" data-i18n="grp_hl_mail">Mail — Delivery Service (gửi quà)</span></div>
+          <label class="check-row"><input id="hl-do-mail" type="checkbox">
+            <span data-i18n="lbl_hl_do_mail">Bật gửi quà Mail (Delivery Service)</span></label>
+          <label class="set-row"><span data-i18n="lbl_hl_mailcount">Số quà gửi mỗi ngày (tối đa 10)</span>
+            <input id="hl-mailcount" type="number" min="1" max="10"></label>
+          <label class="check-row"><input id="hl-mailtop" type="checkbox">
+            <span data-i18n="lbl_hl_mailtop">Dồn hết quà cho NV TRÊN CÙNG danh sách</span></label>
+          <div id="hl-mailrows" class="mail-rows"></div>
+          <p class="hint" data-i18n="hint_hl_mail">Hoặc nhập tên NV + số quà (tổng ≤ 10) để chỉ định người nhận — nhập tên sẽ TỰ bỏ tick "dồn cho NV trên cùng". Gửi ô quà đầu (loved 😄). ⚠️ Cần ảnh portrait NV trong assets/en/heartlink/chars/ (báo Claude thêm tên); tên không khớp → bỏ. Giới hạn game: 10 quà/ngày.</p>
+        </section>
+
+        <div class="task-actions">
+          <button id="btn-save-hl" class="btn btn-primary" data-i18n="btn_save_hl">Lưu cài đặt Heartlink</button>
+          <span id="hl-saved" class="saved-note hidden" data-i18n="saved_note">✓ Đã lưu</span>
+        </div>
       </div>
     </div>
   </main>

@@ -10,9 +10,14 @@ from datetime import timezone
 
 import webview
 
-from module.config import ROOT, Config, utcnow
+from module.ascension_analysis import (
+    analyze_session, cleanup_images, image_dirs, images_size_bytes, render_report_md,
+)
+from module.config import ROOT, Config, MailTarget, utcnow
 from module.logger import gui_log, logger
 from module.scheduler import ORDER, Scheduler, run_single
+
+CAPTURE_ROOT = ROOT / 'data' / 'ascension_capture'
 
 _scheduler: Scheduler | None = None
 _single: threading.Thread | None = None
@@ -46,11 +51,16 @@ MSG = {
     'bounty_saved':      ('Đã lưu cài đặt Bounty Trial', 'Bounty Trial settings saved'),
     'event_saved':       ('Đã lưu cài đặt Event', 'Event settings saved'),
     'efc_saved':         ('Đã lưu cài đặt Event First Clear', 'Event First Clear settings saved'),
+    'heartlink_saved':   ('Đã lưu cài đặt Heartlink', 'Heartlink settings saved'),
+    'asc_no_session':    ('Chưa có/chọn phiên capture', 'No capture session selected'),
+    'asc_exported':      ('Đã xuất báo cáo → {p}', 'Report exported → {p}'),
+    'asc_cleaned':       ('Đã dọn {n} thư mục ảnh, giải phóng {mb}', 'Cleaned {n} image folders, freed {mb}'),
 }
 PRESET_BEHAVIORS = ('warn', 'skip', 'abort')
 CARD_PRIORITIES = ('level_gain', 'super_rare', 'leftmost')
 MAP_KEYS = ('', 'currents', 'dust', 'storm', 'misstep')
 OBJECTIVES = ('power', 'score')
+DISSOLVE_BANDS = ('silver', 'green', 'blue', 'golden')
 TRIAL_KEYS = ('basic', 'tierup', 'skill', 'emblem')
 
 
@@ -194,10 +204,72 @@ class Api:
         a.refresh_cards_no_recommend = bool(data['refresh_cards_no_recommend'])
         a.brief_mode = bool(data['brief_mode'])
         a.save_record = bool(data['save_record'])
+        a.dissolve_record = bool(data.get('dissolve_record', a.dissolve_record))
+        if data.get('dissolve_max_band') in DISSOLVE_BANDS:
+            a.dissolve_max_band = data['dissolve_max_band']
         a.run_timeout = max(300, min(7200, int(data['run_timeout'])))
         cfg.save()
         logger.info('GUI: đã lưu cài đặt Ascension')
         return _m(cfg, 'asc_saved')
+
+    # --- Phân tích phiên capture Ascension (thuần Python, KHÔNG cần AI) ---
+
+    def list_capture_sessions(self) -> list:
+        """Danh sách phiên capture (mới nhất trước) cho dropdown giao diện."""
+        if not CAPTURE_ROOT.exists():
+            return []
+        out = []
+        for d in sorted((p for p in CAPTURE_ROOT.glob('2*') if p.is_dir()), reverse=True):
+            imgs = image_dirs(d)
+            out.append({'name': d.name, 'has_images': bool(imgs), 'n_image_dirs': len(imgs)})
+        return out
+
+    def analyze_capture(self, session: str) -> dict:
+        """Phân tích 1 phiên → metrics (player/technical/per_run) + dung lượng ảnh (MB) để hiển thị."""
+        d = CAPTURE_ROOT / session
+        if not session or not d.exists():
+            return {'error': _m(Config.load(), 'asc_no_session')}
+        data = analyze_session(d)
+        data['images_mb'] = round(images_size_bytes(d) / 1024 / 1024, 1)
+        logger.info(f'GUI: phân tích phiên capture {session}')
+        return data
+
+    def export_capture_report(self, session: str) -> str:
+        """Xuất báo cáo Markdown cho người dùng lưu. Ưu tiên hộp thoại Save; fallback ghi vào
+        thư mục phiên (sống sót khi dọn ảnh)."""
+        cfg = Config.load()
+        d = CAPTURE_ROOT / session
+        if not session or not d.exists():
+            return _m(cfg, 'asc_no_session')
+        md = render_report_md(analyze_session(d))
+        dest = None
+        try:
+            wins = webview.windows
+            if wins:
+                picked = wins[0].create_file_dialog(
+                    webview.SAVE_DIALOG, save_filename=f'ascension_{session}.md',
+                    file_types=('Markdown (*.md)', 'All files (*.*)'))
+                if picked:
+                    dest = picked if isinstance(picked, str) else picked[0]
+        except Exception:
+            dest = None
+        if dest is None:                       # fallback: ghi vào thư mục phiên
+            dest = str(d / f'ascension_{session}.md')
+        from pathlib import Path
+        Path(dest).write_text(md, encoding='utf-8')
+        logger.info(f'GUI: xuất báo cáo phiên {session} → {dest}')
+        return _m(cfg, 'asc_exported', p=dest)
+
+    def cleanup_capture_images(self, session: str) -> str:
+        """Xoá thư mục ảnh run_* của phiên để giải phóng ổ (GIỮ log + báo cáo)."""
+        cfg = Config.load()
+        d = CAPTURE_ROOT / session
+        if not session or not d.exists():
+            return _m(cfg, 'asc_no_session')
+        res = cleanup_images(d)
+        mb = f"{res['freed_bytes'] / 1024 / 1024:.1f} MB"
+        logger.info(f'GUI: dọn ảnh phiên {session} — {res["removed_dirs"]} thư mục, {mb}')
+        return _m(cfg, 'asc_cleaned', n=res['removed_dirs'], mb=mb)
 
     # --- Cài đặt task Bounty Trial ---
 
@@ -244,6 +316,34 @@ class Api:
         cfg.save()
         logger.info('GUI: đã lưu cài đặt Event First Clear')
         return _m(cfg, 'efc_saved')
+
+    # --- Cài đặt task Heartlink ---
+
+    def get_heartlink(self) -> dict:
+        return Config.load().heartlink.model_dump()
+
+    def save_heartlink(self, data: dict) -> str:
+        cfg = Config.load()
+        h = cfg.heartlink
+        h.do_invite = bool(data.get('do_invite', True))
+        h.invite_count = max(1, min(5, int(data['invite_count'])))
+        h.send_gift = bool(data['send_gift'])
+        h.invite_targets = [s.strip() for s in str(data.get('invite_targets', '')).split(',') if s.strip()]
+        h.do_mail = bool(data.get('do_mail', True))
+        h.mail_count = max(1, min(10, int(data.get('mail_count', 10))))
+        # Custom Mail: (name,qty), tổng ≤ mail_count & ≤10
+        targets, budget = [], h.mail_count
+        for row in data.get('mail_targets', []):
+            name = str(row.get('name', '')).strip()
+            qty = max(0, int(row.get('qty', 0)))
+            if name and qty > 0 and budget > 0:
+                qty = min(qty, budget)
+                targets.append(MailTarget(name=name, qty=qty))
+                budget -= qty
+        h.mail_targets = targets
+        cfg.save()
+        logger.info('GUI: đã lưu cài đặt Heartlink')
+        return _m(cfg, 'heartlink_saved')
 
 
 WIN_W, WIN_H = 1380, 900

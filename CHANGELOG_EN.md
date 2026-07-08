@@ -1,5 +1,40 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.0 (2026-07-08) — pre-release — Heartlink dating + Ascension reliability + capture analysis
+
+### New task: Heartlink (dating → Affinity)
+- **`Heartlink`** — raises character **Affinity** through the in-game "phone". Two sub-tasks toggled by
+  `do_invite` / `do_mail`:
+  - **Invite** (≤5/day): pick a character → **Invite** → confirm the **Start Invitation** dialog →
+    **Select Date Location** → **Skip** the date → **Send Gift** (x2 Affinity) / **Leave** → back.
+    Already-dated characters (grey "Invited Today") are skipped; the daily cap ends the loop.
+  - **Mail / Delivery Service** (10 gifts/day, global): send gifts to raise Affinity — pick a character
+    → gift → **Send Gift** → repeat. The cap is detected when the Affinity bar stops changing.
+  - `invite_count` (5), `send_gift` (on), `invite_targets` (prioritise named favourites via portrait
+    match); `mail_count` (10), `mail_targets` (name+qty, else dump all to the top contact).
+- **GUI**: a Heartlink page with two cards (Invite + Mail).
+- **OFF by default** (new task + spends gift items when `send_gift`).
+
+### Ascension — reliability & analysis
+- **ADB retry/reconnect** in `module/device/adb.py` (backoff 2/5/10s, auto-reconnect) — fixes the single
+  hard failure that killed long capture sessions (ADB drop mid-run).
+- **Shop-room deadlock fix** — leave the shop via the correct "Nah, let's go up" option (never re-open
+  the shelf); survived 26 consecutive runs live.
+- **Home→Ascension nav fix** — re-cropped `GO_ENTER` (the Home art changes per featured character).
+- **"Return to Ascension?" dialog** (`ASC_GIVE_UP`) handled when a paused run exists.
+- **Dissolve weak Records at the Save screen** (off by default) — decide keep/discard by the rank
+  **badge frame colour band** (`dissolve_record`, `dissolve_max_band`), no OCR.
+- **Capture-session analysis** (user feature, no AI): pick a session → view metrics (buys/enhances/coins/
+  time) → export a report → clean up images to free disk. Engine `module/ascension_analysis.py`.
+
+### Dispatch
+- **"Dispatch Again" 2-step fix** — the button opens a dialogue + bonus popup on the first press; press
+  up to `COMMISSION_MAX_AGAIN` times, dismissing between, then fall back to manual re-dispatch to 4/4.
+
+### Dev tools
+- `dev_tools/ascension_capture.py` (frame+log capture), `analyze_capture.py` (offline analysis),
+  `rebuild_digits.py` (merge missed OCR glyphs into templates).
+
 ## v0.3.0 (2026-07-07) — pre-release — Event group + Event First Clear task
 
 ### New task: Event First Clear

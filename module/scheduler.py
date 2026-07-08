@@ -19,6 +19,7 @@ from tasks.event_daily import EventDaily
 from tasks.event_first_clear import EventFirstClear
 from tasks.friend_gift import FriendGift
 from tasks.grant import Grant
+from tasks.heartlink import Heartlink
 from tasks.login import Login
 from tasks.mail import Mail
 from tasks.purchase_gift import PurchaseGift
@@ -35,6 +36,7 @@ TASKS = {
     'EventDaily': EventDaily,  # Quick Battle sweep Battle Stage của sự kiện đang diễn ra (theo đợt)
     'EventFirstClear': EventFirstClear,  # tự đánh (Deploy+Auto-Battle) stage sự kiện còn sao xám
     'Grant': Grant,  # nhận quà Startup Grant (Company Goal + Milestone) SAU các task tạo progress
+    'Heartlink': Heartlink,  # hẹn hò tăng Affinity (task con Invite + Mail/Delivery) — mặc định TẮT
     'FriendGift': FriendGift,  # trao đổi stamina với bạn (Acquire All + Gift All); TRƯỚC DailyReward
     'DailyReward': DailyReward,  # gần cuối: gom mission + điểm hoạt động SAU khi các task khác xong
     'Cleanup': Cleanup,  # luôn cuối: về home / đóng game

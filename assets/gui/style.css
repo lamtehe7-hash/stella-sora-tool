@@ -232,7 +232,15 @@ body {
 .saved-note { color: var(--green); font-size: 13px; }
 
 /* ===== Cài đặt Ascension (nhóm settings kiểu Alas) ===== */
-#asc-settings { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+#asc-settings, #heartlink-settings { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.mail-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; }
+.mail-row { display: flex; gap: 8px; }
+.mail-row input {
+  padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit;
+}
+.mail-row input[type="text"] { flex: 1; }
+.mail-row input[type="number"] { width: 60px; text-align: right; }
 .set-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 9px 2px; font-size: 13.5px;
@@ -254,7 +262,22 @@ body {
   border-top: 1px solid var(--border);
 }
 .settings-group .hint { padding-top: 8px; }
-.settings-group .task-actions { display: flex; align-items: center; gap: 12px; padding-top: 12px; }
+.settings-group .task-actions { display: flex; align-items: center; gap: 12px; padding-top: 12px; flex-wrap: wrap; }
+
+/* --- Kết quả phân tích phiên capture --- */
+.an-result { margin-top: 12px; }
+.an-head { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.6; }
+.an-head b { color: var(--text); }
+.an-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.an-cell { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.an-cell .k { font-size: 11.5px; color: var(--muted); }
+.an-cell .v { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.an-tech { margin-top: 10px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.an-tech .ok { color: var(--accent); } .an-tech .bad { color: var(--red); }
+.an-runs { margin-top: 10px; max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.an-runs table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.an-runs th, .an-runs td { padding: 4px 8px; text-align: right; border-bottom: 1px solid var(--border); }
+.an-runs th { position: sticky; top: 0; background: var(--panel); color: var(--muted); }
 
 /* ===== Home ===== */
 .home-wrap { margin: 60px auto 0; text-align: center; }
