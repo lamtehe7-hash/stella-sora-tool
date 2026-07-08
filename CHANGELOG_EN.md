@@ -1,5 +1,40 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.1 (2026-07-08) — pre-release — 12 audit fixes + Heartlink hardening
+
+Full audit of the v0.4.0 batch (multi-agent review, every finding adversarially verified): 12 confirmed
+issues — **all fixed**, the critical paths re-verified live in-game.
+
+### Ascension
+- The **"Return to Ascension?"** paused-run dialog is now handled by the scheduled task itself
+  (`_recover_paused_run`: Give Up → confirm → save the leftover Record). Previously only the dev capture
+  tool handled it, so a paused run (left behind by a crash/timeout) stalled every scheduled attempt.
+- **Capture-session analysis**: self-healed ADB retry warnings are no longer mis-counted as crashes
+  ("completed: NO" on healthy sessions); purchase-phase coin mismatches are now counted too
+  (previously enhance-phase only).
+- **Capture tool** no longer overwrites `config/stella.json` — config overrides are truly RAM-only now.
+
+### Heartlink
+- The **Start Invitation** dialog and the Date-Location screen are polled **together**: a slow dialog
+  could be misread as the daily cap, silently losing the whole day's invites.
+- Bottom tabs retry through the **stacked post-date overlays** (reaction → Gifts Received → Affinity UP)
+  that used to swallow taps — this was breaking the Mail sub-task right after an Invite.
+- Multi-target Mail search scrolls back to the top of the contact list for each target.
+- **Mail send loop verified live up to the real 10/10 daily cap** (8 gifts in one go; at the cap the game
+  rejects silently and the Affinity-bar check stops the loop with the correct count).
+
+### GUI
+- Saving Mail targets whose total exceeds the daily limit is **blocked with a warning** (was silently
+  truncated server-side).
+- The "send all to the top contact" checkbox now always reflects the real saved behaviour.
+- Cancelling the report-export dialog no longer writes the report anyway.
+
+### Dev tools & tests
+- New `dev_tools/profile_ascension.py` — shows where a run's time goes (top time sinks + screenshot
+  cadence); groundwork for an upcoming run-speed optimisation.
+- `rebuild_digits.py` rejects malformed multi-digit CSV labels (substring-check bug).
+- ADB retry tests: scoped sleep patch + a new connect()-failure case (4 cases total).
+
 ## v0.4.0 (2026-07-08) — pre-release — Heartlink dating + Ascension reliability + capture analysis
 
 ### New task: Heartlink (dating → Affinity)

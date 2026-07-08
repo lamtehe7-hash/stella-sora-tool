@@ -28,9 +28,13 @@ _PATTERNS = {
     "refresh_shelf": re.compile(r"refresh kệ lượt"),
     "refresh_card":  re.compile(r"refresh bộ thẻ"),
     "leave":        re.compile(r"Leave Monolith"),
-    "coin_recon":   re.compile(r"số dư \d+ != kỳ vọng sau enhance"),
+    # bắt CẢ 2 phrasing: pha mua "slotN số dư đọc X != kỳ vọng Y" + pha enhance "số dư X != kỳ vọng sau enhance"
+    "coin_recon":   re.compile(r"số dư (đọc )?\d+ != kỳ vọng"),
 }
 _CRASH = re.compile(r"(AdbError|Traceback|\[capture\] Task lỗi|RequestHumanTakeover)")
+# Dòng log ở level lành tính KHÔNG phải bằng chứng crash — vd WARNING retry ADB tự hồi phục
+# ("ADB shell lỗi (AdbError(...)) — reconnect + thử lại") chứa chữ AdbError nhưng là hành vi ĐÚNG.
+_BENIGN_LEVEL = re.compile(r"\| (DEBUG|INFO|WARNING) \|")
 
 
 def _fmt_hms(sec: float) -> str:
@@ -110,9 +114,8 @@ def analyze_session(session_dir) -> dict:
         for ln in log_p.read_text(encoding="utf-8", errors="replace").splitlines():
             if "| WARNING |" in ln:
                 warnings += 1
-            if crash is None and _CRASH.search(ln) and ("ERROR" in ln or "Traceback" in ln
-                                                         or "AdbError" in ln):
-                crash = ln.strip()[:200]
+            if crash is None and _CRASH.search(ln) and not _BENIGN_LEVEL.search(ln):
+                crash = ln.strip()[:200]    # ERROR/CRITICAL hoặc dòng traceback trần (không level)
             m = _RUN_ENTER.search(ln)
             if m:
                 cur = int(m.group(1))

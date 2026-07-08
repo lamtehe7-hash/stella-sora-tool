@@ -103,13 +103,18 @@ class Heartlink(UI):
     # --- Điều hướng ---
 
     def _open_tab(self, tab_xy, check_btn, label: str) -> bool:
-        """Bấm 1 tab đáy phone (Invite/Mail) + xác nhận đã ở đó. Retry 1 lần phòng overlay nuốt tap
-        (vd popup còn treo sau lượt Invite lỗi → cú tap tab đầu chỉ đóng popup, chưa chuyển tab)."""
-        for _ in range(2):
+        """Bấm 1 tab đáy phone (Invite/Mail) + xác nhận đã ở đó. Retry 4 lần + dismiss giữa các lần:
+        sau một buổi date, overlay XẾP HÀNG nhiều lớp (reaction → Gifts Received → Affinity UP) —
+        _dismiss_to_invite bắt được 1 frame Invite giữa các lớp rồi thoát, các lớp còn lại nuốt cú
+        tap tab (live 2026-07-08: 2 tap Mail liên tiếp đều bị nuốt → retry 2 lần không đủ)."""
+        for _ in range(4):
             self.device.click_xy(*tab_xy, name=f'HL_TAB_{label.upper()}')
             if self.wait_until_appear(check_btn, timeout=8):
                 logger.info(f'Heartlink: đã vào tab {label}')
                 return True
+            # tap tab bị overlay nuốt → xả 1 lớp overlay rồi thử lại
+            self.device.click_xy(*HL_DISMISS_XY, name='HL_TAB_DISMISS')
+            time.sleep(1.0)
         logger.info(f'Heartlink: không mở được tab {label} — bỏ qua')
         return False
 
@@ -268,11 +273,22 @@ class Heartlink(UI):
         """Hẹn 1 lượt cho NV đang chọn (HL_INVITE_BTN active). Trả:
         'ok' (về lại màn Invite) | 'capped' (Invite không mở Location = cap ngày) | 'fail' (lỗi giữa flow)."""
         self.device.click_xy(*HL_INVITE_BTN_XY, name='HL_INVITE')
-        # 0) Dialog xác nhận "Start Invitation" (hiện lại sau reset ngày) → bấm Confirm để vào Location.
-        if self.wait_until_appear(HL_START_INVITATION, timeout=3):
-            self.device.click_xy(*HL_INVITE_CONFIRM_XY, name='HL_INVITE_CONFIRM')
-        # 1) Select Date Location → ô đầu (không mở được = đã cap ngày / bị chặn)
-        if not self.wait_until_appear(HL_SELECT_LOCATION, timeout=8):
+        # 0)+1) Poll CHUNG dialog "Start Invitation" (hiện lại sau reset ngày, có thể render trễ)
+        # và màn Select Date Location trong 1 vòng. 2 vòng chờ tuần tự (3s dialog rồi 8s Location)
+        # từng gây false-cap khi dialog trễ >3s: Confirm không được bấm → hiểu nhầm CAP → mất trọn
+        # quota ngày (review 2026-07-08). Không mở được Location = đã cap ngày / bị chặn.
+        deadline = time.time() + 12
+        while time.time() < deadline:
+            self.device.screenshot()
+            if self.appear(HL_SELECT_LOCATION):
+                break
+            if self.appear(HL_START_INVITATION):
+                self.device.click_xy(*HL_INVITE_CONFIRM_XY, name='HL_INVITE_CONFIRM')
+                time.sleep(1.2)
+                deadline = max(deadline, time.time() + 8)   # đã Confirm → chờ thêm Location mở
+                continue
+            time.sleep(0.5)
+        if not self.appear(HL_SELECT_LOCATION):
             return 'capped'
         self.device.click_xy(*HL_LOC_FIRST_XY, name='HL_LOC_FIRST')
         # 2) Travel + buổi hẹn → Skip tới khi hiện Send Gift/Leave
@@ -401,6 +417,7 @@ class Heartlink(UI):
             logger.info(f'Heartlink Mail: bỏ "{slug}" — chưa có portrait (assets/en/heartlink/chars/)')
             return False
         tmpl = cv2.imread(str(p))
+        self._scroll_top()          # về đầu list — target sau có thể nằm TRÊN vị trí lần tìm trước
         x1, y1, x2, y2 = _MAIL_LIST_REGION
         prev = None
         for _ in range(10):

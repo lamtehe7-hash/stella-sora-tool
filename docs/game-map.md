@@ -114,8 +114,16 @@ graph LR
   Service" (`HL_MAIL_TITLE`) + lưới quà (ô đầu 694,325) + **Send Gift** (893,646) + "Gifts Sent Today N/10".
   Chọn NV → tap ô quà đầu (loved) → Send Gift → dismiss reaction/"Affinity UP" (tap 640,150) → lặp.
   Cap-detect: thanh Affinity (755-1090, 198-224) đứng yên sau gửi = 10/10. Config: `mail_count`,
-  `mail_targets` (name+qty; rỗng=dồn NV trên cùng). ⚠️ Send loop chưa verify (10/10 lúc build).
-- Còn nợ: **Mail send loop verify sau reset**; crop portrait list Mail (nhỏ hơn lưới Invite) cho custom
+  `mail_targets` (name+qty; rỗng=dồn NV trên cùng). ✅ **Send loop VERIFY LIVE 2026-07-08 tới cap
+  THẬT** (2 quà sáng + 8 quà trưa = 10/10, Chitose 1350→9050): tại 10/10 game từ chối LẶNG LẼ
+  (không overlay/reaction) → Affinity đứng yên → cap-detect bắt đúng, đếm đúng 8 quà. Counter
+  "Gifts Sent Today **10/10**" chuyển số ĐỎ (~x1108-1145, y660) = tín hiệu màu để detect cap TRỰC
+  TIẾP nếu cần sau này; nút Send Gift vẫn teal khi cap (KHÔNG dùng làm tín hiệu được).
+- ⚠️ **Overlay sau date XẾP HÀNG nhiều lớp** (reaction → "Gifts Received!" → "Affinity UP"):
+  `_dismiss_to_invite` có thể bắt 1 frame Invite GIỮA các lớp rồi thoát, các lớp còn lại nuốt các cú
+  tap tab đáy phone liên tiếp → `_open_tab` retry 4 lần + tap dismiss (640,150) giữa các lần (live
+  2026-07-08: 2 tap Mail liền bị nuốt; sau fix, tap thứ 2 sau dismiss vào được).
+- Còn nợ: crop portrait list Mail (nhỏ hơn lưới Invite) cho custom
   name; crop portrait từng favorite; dialog "leaving early" (chưa gặp khi Skip).
 
 ### go (hub, UI điện thoại) — khảo sát 2026-07-04 tối

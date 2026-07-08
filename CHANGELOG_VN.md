@@ -1,5 +1,38 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.1 (2026-07-08) — pre-release — 12 fix từ đợt audit + gia cố Heartlink
+
+Audit toàn diện batch v0.4.0 (review đa agent, mỗi finding được verify đối kháng): 12 lỗi xác nhận —
+**đã fix hết**, các đường quan trọng re-verify live trong game.
+
+### Ascension
+- Dialog **"Return to Ascension?"** (run bỏ dở) giờ được CHÍNH task theo lịch xử lý
+  (`_recover_paused_run`: Give Up → confirm → lưu Record còn sót). Trước đây chỉ dev-tool capture xử lý,
+  nên một run pause (sót lại sau crash/timeout) làm task kẹt lặp mỗi lần chạy.
+- **Phân tích phiên capture**: warning retry ADB tự-hồi-phục không còn bị đếm nhầm là crash
+  ("Hoàn tất: KHÔNG" trên phiên khỏe mạnh); đếm thêm coin-mismatch pha MUA (trước chỉ pha enhance).
+- **Tool capture** không còn ghi đè `config/stella.json` — config override giờ thật sự chỉ trong RAM.
+
+### Heartlink
+- Dialog **Start Invitation** và màn chọn Location giờ được poll **chung một vòng**: dialog hiện chậm
+  từng bị hiểu nhầm là cap ngày → mất lặng lẽ trọn quota hẹn trong ngày.
+- Tab đáy phone retry xuyên qua **chuỗi overlay xếp lớp sau buổi hẹn** (reaction → Gifts Received →
+  Affinity UP) từng nuốt cú tap — đây là lý do task con Mail fail ngay sau Invite.
+- Tìm NV theo tên ở Mail (nhiều target) giờ cuộn về đầu danh sách cho từng target.
+- **Vòng gửi quà Mail verify live tới cap thật 10/10** (gửi liền 8 quà; tại cap game từ chối lặng lẽ,
+  check thanh Affinity dừng vòng và đếm đúng).
+
+### Giao diện
+- Lưu danh sách quà Mail có tổng vượt giới hạn ngày sẽ **bị chặn kèm cảnh báo** (trước bị cắt âm thầm).
+- Checkbox "dồn hết quà cho NV trên cùng" luôn phản ánh đúng hành vi thực được lưu.
+- Bấm Cancel hộp thoại xuất báo cáo sẽ không ghi file nữa.
+
+### Dev tools & test
+- Mới: `dev_tools/profile_ascension.py` — soi thời gian run tiêu ở đâu (top bồn thời gian + nhịp
+  screenshot); nền tảng cho đợt tối ưu tốc độ run sắp tới.
+- `rebuild_digits.py` từ chối nhãn CSV nhiều chữ số sai định dạng (bug substring-check).
+- Test retry ADB: patch sleep có scope + case mới connect() lỗi (tổng 4 case).
+
 ## v0.4.0 (2026-07-08) — pre-release — Heartlink hẹn hò + Ascension ổn định + phân tích capture
 
 ### Task mới: Heartlink (hẹn hò → Affinity)

@@ -15,7 +15,8 @@ Output (đã .gitignore) — data/ascension_capture/<session_ts>/:
     run_00_setup/      # frame điều hướng trước run 1 (login + map/difficulty/squad/disc lần đầu)
     run_01/ ... run_NN/  # mỗi run Quick Battle 1 thư mục ảnh
 
-⚠️ Config chỉ set trong RAM — KHÔNG ghi đè config/stella.json của bạn.
+⚠️ Config chỉ set trong RAM — Config.save bị vô hiệu trong tiến trình này (task_delay() cuối run
+   vốn gọi save() → từng ghi đè config/stella.json; fix 2026-07-08).
 ⚠️ skip_when_capped=False (chạy đủ N run kể cả tuần đã capped 3000 — mục tiêu là DATA, không phải stub).
 ⚠️ preset_behavior='warn' (không abort giữa 70 run vì 1 lần đọc nhầm preset).
 """
@@ -143,6 +144,10 @@ def main() -> None:
     logger.addHandler(fh)
 
     config = Config.load()
+    # ⚠️ Chặn MỌI ghi config/stella.json từ tiến trình capture: override bên dưới chỉ được sống
+    # trong RAM, nhưng Ascension.run() kết thúc bằng task_delay() → config.save() (từng clobber
+    # config thật của người dùng). Patch class-level vì pydantic chặn gán attribute lạ lên instance.
+    Config.save = lambda self: None
     a = config.ascension
     a.runs_per_session = args.runs
     a.map = args.map

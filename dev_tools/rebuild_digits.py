@@ -90,7 +90,8 @@ def do_apply() -> None:
         n = 0
         for row in rows:
             digit = (row.get("digit") or "").strip()
-            if digit not in "0123456789" or digit == "":
+            # phải đúng 1 ký tự số — `in "0123456789"` là substring check, "23" vẫn lọt (bug review)
+            if len(digit) != 1 or not digit.isdigit():
                 continue
             src_p = src / row["file"]
             if not src_p.exists():

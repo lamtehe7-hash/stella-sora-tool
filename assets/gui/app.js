@@ -177,6 +177,8 @@ const I18N = {
                        en: 'Or enter character names + gift counts (total ≤ 10) to target recipients — entering names AUTO-unchecks "send to top". Sends the first gift (loved 😄). ⚠️ Needs portrait images in assets/en/heartlink/chars/ (ask Claude to add names); unmatched names are skipped. Game limit: 10 gifts/day.' },
   lbl_hl_mailname:   { vi: 'Tên NV', en: 'Name' },
   lbl_hl_mailqty:    { vi: 'Số quà', en: 'Qty' },
+  hl_mail_over:      { vi: 'Tổng số quà các dòng vượt giới hạn — giảm bớt rồi lưu lại',
+                       en: 'Total gift count exceeds the limit — reduce and save again' },
   // --- dynamic ---
   ready:          { vi: 'sẵn sàng', en: 'ready' },
   disabled:       { vi: 'đã tắt', en: 'disabled' },
@@ -727,6 +729,7 @@ function buildMailRows() {
     box.appendChild(row);
   }
   for (let i = 0; i < HL_MAIL_ROWS; i++) $(`hl-mname-${i}`).addEventListener('input', syncMailTop);
+  $('hl-mailtop').addEventListener('change', syncMailTop);  // toggle tay → snap về trạng thái thật
 }
 
 function anyMailName() {
@@ -734,12 +737,14 @@ function anyMailName() {
   return false;
 }
 
-// Nhập tên NV custom → tự bỏ tick + disable "dồn cho NV trên cùng"
+// Checkbox "dồn cho NV trên cùng" LUÔN phản ánh hành vi thật (mail_targets rỗng = dồn NV trên
+// cùng): nhập tên custom → bỏ tick + disable; xoá hết tên → tick lại. Backend không đọc checkbox
+// (hành vi suy ra từ mail_targets), nên không cho toggle tay lệch trạng thái (review 2026-07-08).
 function syncMailTop() {
   const custom = anyMailName();
   const top = $('hl-mailtop');
   top.disabled = custom;
-  if (custom) top.checked = false;
+  top.checked = !custom;
 }
 
 async function loadHeartlink() {
@@ -757,8 +762,7 @@ async function loadHeartlink() {
     $(`hl-mname-${i}`).value = mt[i] ? mt[i].name : '';
     $(`hl-mqty-${i}`).value = (mt[i] && mt[i].qty) ? mt[i].qty : '';
   }
-  $('hl-mailtop').checked = mt.length === 0;
-  syncMailTop();
+  syncMailTop();   // checked/disabled suy ra từ các ô tên vừa điền
 }
 
 $('btn-save-hl').addEventListener('click', async () => {
@@ -767,6 +771,14 @@ $('btn-save-hl').addEventListener('click', async () => {
     const name = ($(`hl-mname-${i}`).value || '').trim();
     const qty = parseInt($(`hl-mqty-${i}`).value, 10) || 0;
     if (name && qty > 0) targets.push({ name, qty });
+  }
+  // Chặn lưu khi tổng qty vượt giới hạn — backend vốn clamp ÂM THẦM theo budget, người dùng
+  // không biết dòng nào bị cắt (review 2026-07-08).
+  const maxTotal = Math.min(parseInt($('hl-mailcount').value, 10) || 10, 10);
+  const totalQty = targets.reduce((s, x) => s + x.qty, 0);
+  if (totalQty > maxTotal) {
+    toast(`${t('hl_mail_over')} (${totalQty} > ${maxTotal})`);
+    return;
   }
   const r = await pywebview.api.save_heartlink({
     do_invite: $('hl-do-invite').checked,

@@ -6,10 +6,11 @@ import numpy as np
 
 from module.base.button import Button
 from module.config import ROOT
-from module.exception import TaskError
+from module.exception import GameStuckError, TaskError
 from module.logger import logger
 from module.ui.page import UI
-from module.ui.pages import ASCENSION_TITLE, page_asc_diff, page_ascension
+from module.ui.pages import (ASCENSION_CHECK, ASCENSION_TITLE, page_asc_diff,
+                             page_ascension)
 
 # --- Trang difficulty (khảo sát 2026-07-04 đêm) ---
 # Quick Battle: tốn vé Monolith (badge x1 cạnh nút), CHỈ sáng khi difficulty đang chọn đã clear.
@@ -626,7 +627,16 @@ class Ascension(UI):
             logger.warning("Ascension: objective='score' chưa được implement — chạy như 'power' "
                            '(xem docs/ascension-strategy.md §4, §8)')
         # Ghé page_ascension (trên đường tới asc_diff) để đọc Weekly Limit + (tuỳ config) chọn map.
-        self.ui_ensure(page_ascension)
+        try:
+            self.ui_ensure(page_ascension)
+        except GameStuckError:
+            # Nav kẹt giữa đường: khả năng cao dialog "Return to Ascension?" (run PAUSE còn sót từ
+            # lần TaskError/timeout/crash trước) chặn — bỏ run pause rồi vào lại. Không có dialog
+            # thì kẹt vì lý do khác → ném tiếp. (Review 2026-07-08: trước đây ASC_GIVE_UP chỉ được
+            # dev-tool capture dùng, task production kẹt GameStuckError lặp 60 phút vô hạn.)
+            if not self._recover_paused_run():
+                raise
+            self.ui_ensure(page_ascension)
         if self.cfg.skip_when_capped:
             if weekly_is_capped(self.device.screenshot()):
                 logger.info('Ascension: Weekly Limit đã đầy (N/3000) — run bây giờ = 0 stub, bỏ qua '
@@ -659,6 +669,31 @@ class Ascension(UI):
 
         logger.info(f'Ascension: hoàn tất {done}/{runs} run')
         self.config.task_delay('Ascension', server_reset=True)
+
+    def _recover_paused_run(self) -> bool:
+        """Bỏ run PAUSE đang chặn đường vào Ascension (dialog "Return to Ascension?" — hiện khi
+        vào Ascension lúc có run dở, vd sau TaskError/run_timeout/crash). Chuỗi thoát (khảo sát
+        2026-07-07, cùng flow với dev_tools/ascension_capture.py --resume): Give Up → dialog
+        "Sure to give up?" (Confirm teal) → màn Record (Save Record — vẫn LƯU, không mất data)
+        → trang Ascension sạch. Trả True nếu ĐÃ gặp dialog + xử lý, False nếu không phải ca này."""
+        self.device.screenshot()
+        if not self.appear(ASC_GIVE_UP):
+            return False
+        logger.warning('Ascension: có run PAUSE từ lần trước — Give Up để bắt đầu run mới sạch')
+        for _ in range(10):
+            if self.appear(ASC_GIVE_UP):
+                self.device.click(ASC_GIVE_UP)
+            elif self.appear(SAVE_RECORD):
+                self.device.click(SAVE_RECORD)      # lưu record run bỏ dở (fail-safe, không mất data)
+            elif self.appear(ASCENSION_TITLE) or self.appear(ASCENSION_CHECK):
+                logger.info('Ascension: đã thoát chuỗi run-pause — trang Ascension sạch')
+                return True
+            elif self.appear(ASC_DIALOG_CONFIRM):   # "Sure to give up?" / dialog Notice → Confirm
+                self.device.click(ASC_DIALOG_CONFIRM)
+            time.sleep(2.5)
+            self.device.screenshot()
+        logger.warning('Ascension: chưa xác nhận thoát hết chuỗi run-pause — giao ui_ensure thử tiếp')
+        return True
 
     def _select_map(self, key: str) -> bool:
         """Chọn map Monolith `key` trên page_ascension (tap nhãn map; verify khung xanh chọn).

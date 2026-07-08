@@ -54,6 +54,7 @@ MSG = {
     'heartlink_saved':   ('Đã lưu cài đặt Heartlink', 'Heartlink settings saved'),
     'asc_no_session':    ('Chưa có/chọn phiên capture', 'No capture session selected'),
     'asc_exported':      ('Đã xuất báo cáo → {p}', 'Report exported → {p}'),
+    'asc_export_cancelled': ('Đã huỷ xuất báo cáo', 'Export cancelled'),
     'asc_cleaned':       ('Đã dọn {n} thư mục ảnh, giải phóng {mb}', 'Cleaned {n} image folders, freed {mb}'),
 }
 PRESET_BEHAVIORS = ('warn', 'skip', 'abort')
@@ -251,9 +252,11 @@ class Api:
                     file_types=('Markdown (*.md)', 'All files (*.*)'))
                 if picked:
                     dest = picked if isinstance(picked, str) else picked[0]
+                else:                          # người dùng bấm Cancel → KHÔNG ghi gì (review 2026-07-08)
+                    return _m(cfg, 'asc_export_cancelled')
         except Exception:
             dest = None
-        if dest is None:                       # fallback: ghi vào thư mục phiên
+        if dest is None:                       # không có window / dialog lỗi: fallback ghi vào thư mục phiên
             dest = str(d / f'ascension_{session}.md')
         from pathlib import Path
         Path(dest).write_text(md, encoding='utf-8')
