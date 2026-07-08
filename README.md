@@ -141,7 +141,8 @@ cho mục đích **phi thương mại**; **mọi hình thức sử dụng thươ
 ## 📚 Tài liệu
 
 - 📖 **[docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md) — Hướng dẫn sử dụng đầy đủ** (cài đặt →
-  cấu hình → từng chức năng, có ảnh minh hoạ).
+  cấu hình → từng chức năng, có ảnh minh hoạ). Bản [English](docs/user-guide.md) ·
+  [日本語](docs/user-guide-ja.md).
 - [CHANGELOG_VN.md](CHANGELOG_VN.md) / [CHANGELOG_EN.md](CHANGELOG_EN.md) — chi tiết bản phát hành.
 - `docs/game-map.md` — bản đồ màn hình / điều hướng trong game.
 - [docs/pc-backend-rejected.md](docs/pc-backend-rejected.md) — vì sao không hỗ trợ bản PC.

@@ -1,6 +1,6 @@
 # Stella Sora Tool (SST) — User Guide
 
-[Tiếng Việt](huong-dan-su-dung.md) | **English**
+[Tiếng Việt](huong-dan-su-dung.md) | **English** | [日本語](user-guide-ja.md)
 
 > The full manual: installation → configuration → every feature.
 > For **Stella Sora (EN server)** running on an **Android emulator** (MuMu Player recommended).

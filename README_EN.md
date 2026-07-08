@@ -140,6 +140,7 @@ it for **noncommercial** purposes; **any commercial use is prohibited**.
 ## 📚 Documentation
 
 - 📖 **[docs/user-guide.md](docs/user-guide.md) — full user guide** (installation → configuration →
-  every task, with screenshots).
+  every task, with screenshots). Also in [日本語](docs/user-guide-ja.md) and
+  [Tiếng Việt](docs/huong-dan-su-dung.md).
 - [CHANGELOG_EN.md](CHANGELOG_EN.md) / [CHANGELOG_VN.md](CHANGELOG_VN.md) — release details.
 - `docs/game-map.md` — in-game screen / navigation map.

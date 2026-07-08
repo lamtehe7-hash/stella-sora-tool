@@ -1,6 +1,6 @@
 # Hướng dẫn sử dụng Stella Sora Tool (SST)
 
-**Tiếng Việt** | [English](user-guide.md)
+**Tiếng Việt** | [English](user-guide.md) | [日本語](user-guide-ja.md)
 
 > Tài liệu hướng dẫn đầy đủ: từ cài đặt → cấu hình → từng chức năng.
 > Dành cho **Stella Sora bản EN** chạy trên **giả lập Android** (khuyến nghị MuMu Player).
