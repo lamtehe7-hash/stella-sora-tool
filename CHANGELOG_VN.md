@@ -1,5 +1,18 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.2 (2026-07-08) — pre-release — Run Ascension nhanh hơn ~28%
+
+### Ascension — tốc độ run
+- Tinh chỉnh **20 điểm chờ cố định sau click** xuyên suốt vòng run (mua shop, chọn thẻ, popup note,
+  vòng settle, màn continue). Một run Diff-8 trọn vẹn giảm **từ ~12 xuống ~8.6 phút** dưới harness
+  capture — run thường giảm từ ~8-9 xuống **~6 phút**.
+- Chủ động GIỮ NGUYÊN: nhịp chọn option event (double-click option có hậu quả thật), thời gian chờ
+  Network-Retry, và mọi retry ổn định OCR.
+- **Verify live** trên run 100 bước: kết thúc sạch, đối soát coin sạch (0 lệch — baseline lệch 1),
+  không dao động chọn thẻ, không mua hụt, không dính guard chống spam click.
+- Profile bằng `dev_tools/profile_ascension.py` (thêm ở v0.4.1); thời gian còn lại chủ yếu là
+  animation thật của game (lật thẻ, chuyển tầng).
+
 ## v0.4.1 (2026-07-08) — pre-release — 12 fix từ đợt audit + gia cố Heartlink
 
 Audit toàn diện batch v0.4.0 (review đa agent, mỗi finding được verify đối kháng): 12 lỗi xác nhận —

@@ -889,7 +889,7 @@ class Ascension(UI):
             # Dialog Confirm trong run: "Leave anyway?" (phải) / "Record Saved" (giữa)
             if self.appear(ASC_DIALOG_CONFIRM):
                 self.device.click_xy(*ASC_DIALOG_CONFIRM.last_match, name=f'ASC_CFM_{suffix}')
-                time.sleep(2.5)
+                time.sleep(1.5)
                 continue
 
             # Safety net: bấm mãi 1 option mà màn không đổi ở phòng cuối -> rời Monolith
@@ -903,7 +903,7 @@ class Ascension(UI):
             # Màn chọn thẻ: bật Brief nếu đang tắt (chạy nhanh hơn), rồi chọn thẻ
             if self._handle_card_pick(img, suffix):
                 last_evt, evt_repeat = None, 0
-                time.sleep(2.5)
+                time.sleep(1.4)
                 continue
 
             # Phòng Shop (Trade Domain / phòng cuối): mua chiến lược + enhance trọn gói 1 lần
@@ -942,11 +942,11 @@ class Ascension(UI):
             # Hồi phục nếu lạc trong shop UI / popup shop (vd _do_shop bị ngắt giữa chừng)
             if self.appear(SHOP_NOTES):
                 self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{suffix}')
-                time.sleep(1.5)
+                time.sleep(0.8)
                 continue
             if self.appear(SHOP_DIALOG):
                 self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{suffix}')
-                time.sleep(1.5)
+                time.sleep(0.8)
                 continue
             if self.appear(SHOP_SHELF):
                 logger.info('Ascension: đang ở shop UI ngoài luồng — thoát ra')
@@ -965,13 +965,13 @@ class Ascension(UI):
             if self.appear(ASCENSION_CONTINUE):
                 self.device.click_xy(640, 653, name=f'ASC_CONT_{suffix}')
                 last_evt, evt_repeat, shop_done = None, 0, False
-                time.sleep(2)
+                time.sleep(1.2)
                 continue
 
             if self.appear(DIALOG_PIN):
                 self.device.click_xy(740, 585, name=f'ASC_DLG_{suffix}')
                 shop_done = False
-                time.sleep(1.5)
+                time.sleep(1.0)
                 continue
 
             # Màn lạ: chờ 3 nhịp rồi tap vùng hộp thoại — vô hại trên cutscene/overlay lạ;
@@ -980,7 +980,7 @@ class Ascension(UI):
             if unknown >= 3:
                 self.device.click_xy(740, 585, name=f'ASC_UNK_{suffix}')
                 unknown = 0
-            time.sleep(2)
+            time.sleep(1.5)
 
         raise TaskError(f'Ascension: run không kết thúc sau {self.cfg.run_timeout}s')
 
@@ -1015,7 +1015,7 @@ class Ascension(UI):
                     logger.info(f'Ascension: không thẻ 👍 — refresh bộ thẻ '
                                 f'({CARD_REFRESH_COST} coin, số dư {coins})')
                     self.device.click(CARD_REFRESH)
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                     return True
             target = ASCENSION_SELECT.last_match[0]
             why = 'game focus sẵn'
@@ -1072,7 +1072,7 @@ class Ascension(UI):
         mode = 'vét coin' if burn else ('phòng cuối' if last_room else 'giữa run')
         logger.info(f'Ascension: phòng Shop — mua sắm ({mode})')
         self.device.click_xy(640, SHOP_PURCHASE.last_match[1], name='ASC_SHOP_OPEN')
-        time.sleep(3)
+        time.sleep(1.8)
         # Reserve = coin chừa lại khi mua/refresh (đảm bảo đủ enhance sau đó).
         # - burn (vét cuối): 0.
         # - giữa run: enhance_reserve (360 = Free+60+120+180) — vì phòng sau còn cần enhance.
@@ -1116,10 +1116,10 @@ class Ascension(UI):
                         f'({SHOP_REFRESH_COST} coin, số dư {coins})')
             self.device.click_xy(*SHOP_REFRESH_XY, name=f'ASC_SHOPREF_{self._shop_refreshes}')
             self._shop_refreshes += 1
-            time.sleep(2.5)
+            time.sleep(1.5)
         if self._shop_settle():
             self.device.click_xy(*SHOP_BACK_XY, name='ASC_SHOP_EXIT')
-            time.sleep(2.5)
+            time.sleep(1.5)
 
     def _buy_slot(self, i: int, price: int, sale: bool, coins, reserve: int, burn: bool):
         """Mở dialog slot i và mua nếu hợp lệ. Trả (đã_mua, số_dư_mới). Melody không có panel
@@ -1128,7 +1128,7 @@ class Ascension(UI):
         if not self._shop_settle():
             return False, coins
         self.device.click_xy(*SHOP_SLOTS[i], name=f'ASC_SLOT_{i}')
-        time.sleep(1.8)
+        time.sleep(1.0)
         img = self.device.screenshot()
         if not self.appear(SHOP_DIALOG):
             return False, coins  # Sold Out / màn khác chen ngang
@@ -1137,7 +1137,7 @@ class Ascension(UI):
             logger.info(f'Ascension: slot{i} Melody không Harmony Skill nào cần — bỏ qua')
             self._audit_dump(f'skip_slot{i}')
             self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
-            time.sleep(1.5)
+            time.sleep(0.8)
             return False, coins
         dlg = dialog_price(img)
         if dlg is not None and dlg != price:
@@ -1148,16 +1148,16 @@ class Ascension(UI):
             logger.info(f'Ascension: slot{i} giá {price} vượt ngân sách '
                         f'(số dư {coins}, chừa {reserve}) — bỏ qua')
             self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
-            time.sleep(1.5)
+            time.sleep(0.8)
             return False, coins
         self.device.click_xy(*SHOP_BUY_XY, name=f'ASC_BUY_{i}')
-        time.sleep(2)
+        time.sleep(1.2)
         self.device.screenshot()
         if self.appear(SHOP_DIALOG):
             # Không mua được (thiếu coin dù đã tính?) — đóng dialog đi tiếp
             logger.warning(f'Ascension: slot{i} mua hụt (giá {price}, số dư ước {coins})')
             self.device.click_xy(*SHOP_CLOSE_XY, name=f'ASC_SHOPX_{i}')
-            time.sleep(1.5)
+            time.sleep(0.8)
             return False, coins
         self._shop_settle()  # Drink -> chọn 1-trong-3 thẻ; Melody -> popup Notes
         new = read_coins(self.device.screenshot())
@@ -1253,7 +1253,7 @@ class Ascension(UI):
                         f"({'Free' if cost == 0 else cost} coin, số dư {coins})")
             self.device.click_xy(640, SHOP_ENHANCE.last_match[1], name=f'ASC_ENH_{step % 3}')
             step += 1
-            time.sleep(2.5)
+            time.sleep(1.4)
             if not self._settle_to_options():
                 return
 
@@ -1269,16 +1269,16 @@ class Ascension(UI):
                 return True
             if self.appear(SHOP_NOTES):
                 self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{n % 3}')
-                time.sleep(1.5)
+                time.sleep(0.6)
                 continue
             if self.appear(ASC_DIALOG_CONFIRM):
                 self.device.click_xy(*ASC_DIALOG_CONFIRM.last_match, name=f'ASC_CFM_{n % 3}')
-                time.sleep(2)
+                time.sleep(1.2)
                 continue
             if self._handle_card_pick(img, n % 3):
-                time.sleep(2.5)
+                time.sleep(1.4)
                 continue
-            time.sleep(1.5)
+            time.sleep(0.8)
         logger.warning('Ascension: không về được màn options shop sau enhance')
         return False
 
@@ -1294,16 +1294,16 @@ class Ascension(UI):
                 return True
             if self.appear(SHOP_NOTES):
                 self.device.click_xy(*SHOP_DISMISS_XY, name=f'ASC_NOTE_{n % 3}')
-                time.sleep(1.5)
+                time.sleep(0.6)
                 continue
             if self._handle_card_pick(img, n % 3):
-                time.sleep(2.5)
+                time.sleep(1.4)
                 continue
             # Màn 1-trong-3 của Drink có thể không 👍 và không focus sẵn (không có Select):
             # tap thẻ giữa để focus rồi vòng sau Select. Tap này vô hại trên các màn khác.
             if n % 4 == 3:
                 self.device.click_xy(CARD_X[1], CARD_Y, name=f'ASC_SETTLE_{n % 3}')
-            time.sleep(1.5)
+            time.sleep(0.8)
         return False
 
     # --- event / nhận diện chung ----------------------------------------------

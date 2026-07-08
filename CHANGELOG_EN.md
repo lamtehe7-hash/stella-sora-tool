@@ -1,5 +1,18 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.2 (2026-07-08) — pre-release — Ascension runs ~28% faster
+
+### Ascension — run speed
+- Tuned **20 fixed post-click delays** across the run loop (shop buys, card picks, note popups,
+  settle loops, continue screens). A full Diff-8 run drops **from ~12 to ~8.6 minutes** under the
+  capture harness — typical plain runs go from ~8-9 down to **~6 minutes**.
+- Deliberately left untouched: event-choice pacing (double-click on options has real consequences),
+  the network-retry wait, and every OCR-stability retry.
+- **Verified live** on a 100-step run: clean finish, coin reconciliation clean (0 mismatches,
+  baseline had 1), no card-pick oscillation, no failed purchases, no click-spam guard trips.
+- Profiled with `dev_tools/profile_ascension.py` (added in v0.4.1); the remaining time is mostly
+  genuine game animation (card flips, floor transitions).
+
 ## v0.4.1 (2026-07-08) — pre-release — 12 audit fixes + Heartlink hardening
 
 Full audit of the v0.4.0 batch (multi-agent review, every finding adversarially verified): 12 confirmed
