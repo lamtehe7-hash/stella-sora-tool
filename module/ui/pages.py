@@ -25,7 +25,10 @@ MENU_CHECK = Button('menu/MENU_CHECK.png', area=(806, 10, 912, 82))
 # threshold 0.80: tab nền nút nhà đổi sắc nhẹ theo trang (Basic Trial/Ascension match 0.828,
 # trang không có nút ≤0.454 — đo 2026-07-04)
 GOTO_HOME = Button('common/GOTO_HOME.png', area=(332, 2, 420, 82), threshold=0.80)
-MAIL_ENTER = Button('home/MAIL_ENTER.png', area=(1121, 5, 1201, 78))
+# MAIL_ENTER: re-crop 2/3 TRÁI bao thư (2026-07-08) — CHẤM ĐỎ "thư mới" đè lên góc phải-trên bao thư
+# làm template cũ (nguyên bao thư sạch) vỡ match (đo 0.752<0.85). Vùng trái bất biến dù có/không
+# chấm đỏ + threshold 0.80 — cùng họ fix FRIEND/GO/HEARTLINK/PURCHASE_ENTER.
+MAIL_ENTER = Button('home/MAIL_ENTER.png', area=(1126, 13, 1185, 74), threshold=0.80)
 # FRIEND_ENTER: re-crop icon-only (2-người, phần trái+giữa) né CHẤM ĐỎ thông báo ở góc phải-trên
 # (2026-07-06) — template cũ dính vùng chấm đỏ nên vỡ match khi có thông báo (0.776<0.85). Icon-only
 # + threshold 0.80 -> bất biến có/không chấm đỏ (đo: home 1.000, friend_profile 0.251).

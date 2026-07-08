@@ -14,9 +14,12 @@ from module.ui.pages import PURCHASE_CHECK, page_purchase
 DAILY_GIFT = Button('purchase/DAILY_GIFT.png', area=(10, 632, 140, 698))
 
 # ⚠️ Màn Purchase: tap nhầm vào CARD bên phải sẽ mở hộp thoại MUA (tốn Journey Ticket). Vì vậy khi
-# đóng popup "Items Obtained!" (Select anywhere to continue) CHỈ tap vùng TRÁI an toàn — (200,400)
-# nằm trên tranh nhân vật, dưới các tab, không trúng card/nút nào.
-SAFE_DISMISS = (200, 400)
+# đóng popup "Items Obtained!" (Select anywhere to continue) CHỈ tap vùng TRÁI an toàn.
+# ⚠️ Popup có DẢI TRẮNG hiển thị item phủ TOÀN chiều ngang (y≈233-480) và dải này NUỐT tap —
+# (200,400) cũ nằm trong dải nên kẹt không thoát được (bug 2026-07-08). Điểm mới (350,575):
+# lúc popup = nền mờ DƯỚI dải trắng (tap được, cạnh chữ "Select anywhere to continue" y≈583);
+# lúc đã về màn Purchase = tranh nhân vật (phải tab trái x≈240, trái lưới card x≈600) — vô hại.
+SAFE_DISMISS = (350, 575)
 
 
 class PurchaseGift(UI):
