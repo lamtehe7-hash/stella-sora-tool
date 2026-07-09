@@ -38,6 +38,31 @@ Dành cho người dùng cuối — **không cần cài đặt gì ngoài giả 
 
 ---
 
+## 🎮 Dùng giả lập khác (LDPlayer / BlueStacks / Nox / MEmu…)
+
+Tool kết nối **thuần bằng ADB** (không dùng API riêng của MuMu), nên chạy được với **mọi giả lập
+Android có ADB**. Đổi giả lập chỉ cần chỉnh 2 ô trong **Cấu hình** cho khớp:
+
+1. **Bật ADB** trong cài đặt giả lập (mỗi hãng một chỗ — xem cột cuối bảng).
+2. **Đặt độ phân giải `1280 × 720`** (rộng × cao, game chạy ngang) — **bắt buộc**; sai số này tool báo
+   lỗi và dừng ngay (tool nhận diện bằng ảnh mẫu đúng kích thước, không tự co giãn).
+3. Mở cửa sổ dòng lệnh, chạy `adb devices` để lấy đúng **Serial** (vd `127.0.0.1:5555`).
+4. Vào **Cấu hình** nhập **Serial** + **đường dẫn adb.exe** → **Lưu**.
+
+| Giả lập | Serial (cổng ADB) thường gặp | adb.exe kèm theo (ví dụ) | Bật ADB ở đâu |
+|---|---|---|---|
+| **MuMu Player** (mặc định) | `127.0.0.1:16384` | `…\MuMuPlayerGlobal\nx_device\12.0\shell\adb.exe` | Bật sẵn |
+| **LDPlayer** | `127.0.0.1:5555` | `…\LDPlayer9\adb.exe` | Settings → Other settings → *ADB debugging: Open local connection* |
+| **BlueStacks 5** | `127.0.0.1:5555` | `…\BlueStacks_nxt\HD-Adb.exe` | Settings → Advanced → *Android Debug Bridge* |
+| **Nox** | `127.0.0.1:62001` | `…\Nox\bin\nox_adb.exe` | Bật sẵn |
+| **MEmu** | `127.0.0.1:21503` | `…\Microvirt\MEmu\adb.exe` | Bật sẵn |
+
+> 💡 Cổng ADB có thể khác theo phiên bản hoặc khi mở **nhiều instance** — cứ chạy `adb devices` để lấy
+> đúng serial. Nếu không muốn dùng adb.exe kèm giả lập, gõ `adb` ở ô đường dẫn (khi máy đã cài adb và có
+> trong PATH). Mặc định của tool đang tinh chỉnh cho **MuMu**; giả lập khác chỉ cần đổi 2 ô này.
+
+---
+
 ## 📋 Các task hiện có
 
 `Login` · `Mail` · `Dispatch` (Commission) · `Shop` · `BountyTrial` · `Ascension` · `EventDaily` ·

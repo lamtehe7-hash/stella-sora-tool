@@ -38,6 +38,32 @@ For end users — **nothing to install besides an emulator**:
 
 ---
 
+## 🎮 Using another emulator (LDPlayer / BlueStacks / Nox / MEmu…)
+
+The tool connects **purely over ADB** (no MuMu-specific API), so it works with **any Android emulator
+that exposes ADB**. Switching emulators only means adjusting 2 fields in **Settings**:
+
+1. **Enable ADB** in the emulator's settings (location differs per vendor — see the last column).
+2. **Set the resolution to `1280 × 720`** (width × height, the game runs landscape) — **required**; any
+   other value makes the tool error out and stop (templates are cropped at this exact size, no auto-scaling).
+3. Open a command prompt and run `adb devices` to get the correct **serial** (e.g. `127.0.0.1:5555`).
+4. Open **Settings**, enter the **serial** + the **adb.exe path** → **Save**.
+
+| Emulator | Typical serial (ADB port) | Bundled adb.exe (example) | Where to enable ADB |
+|---|---|---|---|
+| **MuMu Player** (default) | `127.0.0.1:16384` | `…\MuMuPlayerGlobal\nx_device\12.0\shell\adb.exe` | On by default |
+| **LDPlayer** | `127.0.0.1:5555` | `…\LDPlayer9\adb.exe` | Settings → Other settings → *ADB debugging: Open local connection* |
+| **BlueStacks 5** | `127.0.0.1:5555` | `…\BlueStacks_nxt\HD-Adb.exe` | Settings → Advanced → *Android Debug Bridge* |
+| **Nox** | `127.0.0.1:62001` | `…\Nox\bin\nox_adb.exe` | On by default |
+| **MEmu** | `127.0.0.1:21503` | `…\Microvirt\MEmu\adb.exe` | On by default |
+
+> 💡 The ADB port can differ between versions or when running **multiple instances** — just run
+> `adb devices` to grab the right serial. If you'd rather not use the emulator's bundled adb.exe, type
+> `adb` in the path field (when adb is installed and on your PATH). The tool's defaults are tuned for
+> **MuMu**; other emulators only need these 2 fields changed.
+
+---
+
 ## 📋 Available tasks
 
 `Login` · `Mail` · `Dispatch` (Commission) · `Shop` · `BountyTrial` · `Ascension` · `EventDaily` ·
