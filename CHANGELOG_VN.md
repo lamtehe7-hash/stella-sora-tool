@@ -1,5 +1,35 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.4 (2026-07-09) — pre-release — Task mới WeeklyReward + fix Grant/Mail/PurchaseGift
+
+### Task mới: WeeklyReward (task thứ 15, mặc định BẬT)
+- Chạy sau DailyReward: mở Missions ▸ tab **Weekly Affairs**, bấm **Claim All** khi nút sáng, rồi
+  nhận dãy rương điểm tuần. Đã verify live cả 2 nhánh (có quà nhận thật + không có gì để nhận).
+
+### Grant — fix lặp vô hạn
+- `Grant` là task duy nhất chạy xong **không tự hẹn lịch lại**. Bình thường vô hại, nhưng nếu lịch
+  của nó lọt về quá khứ (vd sau một lần bị phạt lỗi), scheduler sẽ gọi lại nó **liên tục vô hạn** —
+  vào/ra màn Startup Grant mỗi ~6 giây tới khi guard chống spam-click nổ (`GameTooManyClickError`,
+  đã xảy ra thực tế 2026-07-09). Giờ Grant tự hẹn tới reset server kế tiếp như mọi task khác.
+- **Gia cố scheduler**: task nào chạy xong mà `next_run` vẫn ở quá khứ → ghi WARNING + tự đẩy
+  +60 phút — không task nào có thể hot-loop kiểu này nữa.
+- Verify live: một lượt claim đầy đủ (Company Goal Today + Weekly → lên tier → Milestone) kết thúc
+  với lịch hẹn đúng reset; kèm test offline cho guard scheduler.
+
+### Mail — kẹt ở Home
+- **Chấm đỏ thư mới** đè góc icon bao thư làm template không match (0.752 < 0.85) → task không vào
+  được màn thư. Re-crop template lấy 2/3 trái bao thư (né chấm đỏ), threshold 0.80. Verify: match cả
+  khi có/không chấm đỏ, vẫn loại màn khác; chạy Mail trọn vòng OK.
+
+### PurchaseGift — kẹt popup "Items Obtained!"
+- Điểm tap đóng popup (200,400) rơi vào dải trắng hiển thị item — vùng này **nuốt tap** nên popup
+  không bao giờ đóng. Dời xuống (350,575), dưới dải item. (Nhánh đã-nhận + điều hướng đã verify
+  live; nhánh popup sẽ tự xác nhận ở lần nhận quà daily kế.)
+
+### Tài liệu
+- Thêm hướng dẫn sử dụng **tiếng Anh** và **日本語** (`docs/user-guide.md`, `docs/user-guide-ja.md`)
+  + switcher 3 ngôn ngữ; bản JP ghi rõ tool chỉ hỗ trợ **client EN**.
+
 ## v0.4.3 (2026-07-08) — pre-release — Nút Dừng ngắt task hiện tại NGAY
 
 ### GUI / Scheduler

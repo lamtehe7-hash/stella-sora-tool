@@ -56,25 +56,26 @@ class Grant(UI):
 
     def run(self) -> None:
         try:
-            if not self._enter():
-                return
-            self.device.screenshot()
-            _, company = self._tab_dots()
-            if company:
-                logger.info('Grant: Company Goal có chấm đỏ → nhận')
-                self._claim_company()
-            else:
-                logger.info('Grant: Company Goal không có chấm đỏ — bỏ qua')
+            if self._enter():
+                self.device.screenshot()
+                _, company = self._tab_dots()
+                if company:
+                    logger.info('Grant: Company Goal có chấm đỏ → nhận')
+                    self._claim_company()
+                else:
+                    logger.info('Grant: Company Goal không có chấm đỏ — bỏ qua')
 
-            self.device.screenshot()
-            milestone, _ = self._tab_dots()   # re-check: claim Company Goal có thể lên tier
-            if milestone:
-                logger.info('Grant: Grant Milestone có chấm đỏ → nhận')
-                self._claim_milestone()
-            else:
-                logger.info('Grant: Grant Milestone không có chấm đỏ — bỏ qua')
+                self.device.screenshot()
+                milestone, _ = self._tab_dots()   # re-check: claim Company Goal có thể lên tier
+                if milestone:
+                    logger.info('Grant: Grant Milestone có chấm đỏ → nhận')
+                    self._claim_milestone()
+                else:
+                    logger.info('Grant: Grant Milestone không có chấm đỏ — bỏ qua')
         finally:
             self._go_home()
+        # Lỗi giữa chừng không tới được đây → scheduler tự phạt 30-60' rồi thử lại.
+        self.config.task_delay('Grant', server_reset=True)
 
     # --- Điều hướng ---
 

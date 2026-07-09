@@ -53,6 +53,11 @@ device_lock = threading.Lock()
 def run_task(name: str, config: Config, device: Device) -> None:
     logger.info(f'===== Task: {name} =====')
     TASKS[name](config, device).run()
+    if config.task(name).next_run <= utcnow():
+        # Task xong mà không hẹn lại → scheduler sẽ gọi lại NGAY LẬP TỨC, lặp vô hạn
+        # tới khi click-record nổ GameTooManyClickError (đã xảy ra với Grant 2026-07-09).
+        logger.warning(f'{name}: xong nhưng next_run vẫn ở quá khứ — tự hẹn +60 phút.')
+        config.task_delay(name, minutes=60)
     logger.info(f'===== Xong: {name}, next_run={config.task(name).next_run} UTC =====')
 
 

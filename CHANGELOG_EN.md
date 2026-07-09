@@ -1,5 +1,37 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.4 (2026-07-09) — pre-release — New WeeklyReward task + Grant/Mail/PurchaseGift fixes
+
+### New task: WeeklyReward (task #15, enabled by default)
+- After DailyReward, opens Missions ▸ **Weekly Affairs** tab, presses **Claim All** when it is lit,
+  then claims the weekly-points chest row. Verified live on both paths (real claim + nothing-to-claim).
+
+### Grant — infinite-loop fix
+- `Grant` was the only task that never rescheduled itself after finishing. Normally harmless, but if
+  its schedule ever slipped into the past (e.g. after a one-off error penalty), the scheduler re-ran
+  it **back-to-back forever** — entering and leaving the Startup Grant screen every ~6 seconds until
+  the click-spam guard tripped (`GameTooManyClickError`, seen in the field on 2026-07-09). Grant now
+  schedules itself to the next server reset like every other task.
+- **Scheduler hardening**: after any task finishes with its `next_run` still in the past, the
+  scheduler logs a warning and pushes it +60 minutes — no future task can hot-loop this way again.
+- Verified live: full claim run (Company Goal Today + Weekly targets → tier-up → Milestone) ending
+  with a correct next-reset schedule; plus an offline regression test for the scheduler guard.
+
+### Mail — stuck at Home
+- The **new-mail red dot** overlapped the mail icon's corner and broke template matching
+  (score 0.752 < 0.85), so the task never entered the mail screen. Template re-cropped to the
+  dot-free left 2/3 of the envelope (threshold 0.80). Verified: matches with and without the dot,
+  still rejects other screens; full Mail run OK.
+
+### PurchaseGift — stuck on the "Items Obtained!" popup
+- The blind-dismiss tap point (200,400) landed inside the popup's white item band, which swallows
+  taps — the popup never closed. Moved to (350,575), below the band. (Claimed-already path and
+  navigation were verified live; the popup path re-verifies on the next daily gift.)
+
+### Docs
+- New **English** and **日本語** user guides (`docs/user-guide.md`, `docs/user-guide-ja.md`) with a
+  3-language switcher; JP guide notes the tool supports the **EN client only**.
+
 ## v0.4.3 (2026-07-08) — pre-release — Stop button now interrupts the current task immediately
 
 ### GUI / Scheduler
