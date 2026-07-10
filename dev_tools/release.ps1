@@ -63,10 +63,17 @@ Copy-Item "$repo\dist\app" $stage -Recurse
 @"
 Stella Sora Tool — bản portable $tag (Windows 64-bit)
 
-1. Giải nén CẢ thư mục này — giữ app.exe, _internal và assets cạnh nhau.
-2. Mở giả lập Android, bật ADB, đăng nhập Stella Sora (EN) về màn hình Home.
-3. Chạy app.exe. Lần đầu: vào Cấu hình nhập Serial ADB (vd 127.0.0.1:16384) + đường dẫn adb.
-4. Bật task muốn chạy rồi bấm Start.
+YÊU CẦU HỆ THỐNG (cài 1 lần, MIỄN PHÍ của Microsoft — Windows 10/11 đã update thường CÓ SẴN):
+  - .NET Framework 4.8:  https://dotnet.microsoft.com/download/dotnet-framework/net48
+  - WebView2 Runtime:    https://developer.microsoft.com/microsoft-edge/webview2/
+  Nếu mở app.exe hiện lỗi "Failed to resolve Python.Runtime..." = máy THIẾU .NET Framework 4.8
+  → cài gói .NET ở trên rồi khởi động lại máy và chạy lại.
+
+CÁCH DÙNG:
+  1. Giải nén CẢ thư mục này — giữ app.exe, _internal và assets cạnh nhau.
+  2. Mở giả lập Android, bật ADB, đăng nhập Stella Sora (EN) về màn hình Home.
+  3. Chạy app.exe. Lần đầu: vào Cấu hình nhập Serial ADB (vd 127.0.0.1:16384) + đường dẫn adb.
+  4. Bật task muốn chạy rồi bấm Start.
 
 config/ và log/ tự tạo cạnh app.exe khi chạy lần đầu. Không cần cài Python.
 "@ | Set-Content "$stage\README.txt" -Encoding utf8

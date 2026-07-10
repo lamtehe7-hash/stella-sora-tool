@@ -1,5 +1,16 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.5 (2026-07-10) — pre-release — Báo lỗi thân thiện khi máy thiếu .NET Framework
+
+### Fix: `app.exe` crash "Failed to resolve Python.Runtime…" trên máy thiếu .NET
+- Nguyên nhân: giao diện desktop (pywebview → WebView2) cần **.NET Framework 4.8** để nạp `pythonnet`.
+  Máy người tải **thiếu/cũ .NET Framework (< 4.7.2)** thì crash ngay khi mở, kèm traceback PyInstaller
+  khó hiểu. **Bản exe không hỏng** — chỉ là máy đích thiếu thành phần Windows.
+- Giờ app **bắt lỗi này và hiện hộp thoại tiếng Việt** hướng dẫn cài **.NET Framework 4.8 + WebView2
+  Runtime** (kèm link), thay vì traceback. Lỗi khởi động khác cũng có thông báo gọn + trỏ tới `log/`.
+- **Docs**: README (VN/EN), hướng dẫn sử dụng, và `README.txt` trong bản tải về đều đã nêu yêu cầu
+  .NET Framework 4.8 + WebView2.
+
 ## v0.4.4 (2026-07-09) — pre-release — Task mới WeeklyReward + fix Grant/Mail/PurchaseGift
 
 ### Task mới: WeeklyReward (task thứ 15, mặc định BẬT)

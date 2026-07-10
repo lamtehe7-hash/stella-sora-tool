@@ -1,5 +1,18 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.5 (2026-07-10) — pre-release — Friendly error when the machine is missing .NET Framework
+
+### Fix: `app.exe` crash "Failed to resolve Python.Runtime…" on machines without .NET
+- Cause: the desktop UI (pywebview → WebView2) needs **.NET Framework 4.8** to load `pythonnet`.
+  A downloader's machine that is **missing/old .NET Framework (< 4.7.2)** crashes on launch with a
+  confusing PyInstaller traceback. **The exe is not broken** — the target machine lacks a Windows
+  component.
+- The app now **catches this and shows a Vietnamese dialog** guiding the user to install
+  **.NET Framework 4.8 + WebView2 Runtime** (with links) instead of a traceback. Other startup
+  failures also get a short message pointing to the `log/` folder.
+- **Docs**: README (VN/EN), user guides, and the bundled `README.txt` now state the .NET Framework 4.8
+  + WebView2 requirement.
+
 ## v0.4.4 (2026-07-09) — pre-release — New WeeklyReward task + Grant/Mail/PurchaseGift fixes
 
 ### New task: WeeklyReward (task #15, enabled by default)

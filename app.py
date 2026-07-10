@@ -6,6 +6,7 @@ Giao diện web thuần vẫn dùng được: python gui.py
 """
 import sys
 import threading
+import traceback
 from datetime import timezone
 
 import webview
@@ -378,17 +379,67 @@ def _fit_and_show(window) -> None:
         window.show()
 
 
+def _msgbox(title: str, msg: str) -> None:
+    """Hộp thoại lỗi native (không cần .NET/console) — hoạt động cả khi build windowed."""
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, msg, title, 0x10)  # MB_ICONERROR
+    except Exception:
+        print(f'{title}\n{msg}')
+
+
+def _handle_gui_start_error(exc: Exception) -> None:
+    """Giao diện desktop chết khi khởi động (thường do máy thiếu .NET Framework để nạp
+    pythonnet/clr cho pywebview→winforms). Thay traceback PyInstaller khó hiểu bằng hướng
+    dẫn tiếng Việt rõ ràng. Xem HANDOVER §build/pyinstaller — Python.Runtime.dll là
+    netstandard2.0 nên cần .NET Framework ≥ 4.7.2 trên máy chạy."""
+    tb = traceback.format_exc()
+    logger.error(f'Không khởi động được giao diện desktop: {exc!r}')
+    logger.error(tb)
+    blob = (tb + repr(exc)).lower()
+    dotnet = any(k in blob for k in (
+        'clr', 'pythonnet', 'python.runtime', '.net', 'winforms', 'webview2', 'edgechromium',
+    ))
+    if dotnet:
+        title = 'Stella Sora Tool — thiếu thành phần Windows (.NET)'
+        msg = (
+            'Không mở được giao diện desktop vì máy đang THIẾU thành phần .NET của Windows '
+            '(app cần .NET Framework 4.8 để chạy cửa sổ giao diện).\n\n'
+            'Cách khắc phục — cài 2 gói MIỄN PHÍ của Microsoft rồi mở lại app:\n\n'
+            '  1) .NET Framework 4.8 (Runtime):\n'
+            '     https://dotnet.microsoft.com/download/dotnet-framework/net48\n\n'
+            '  2) WebView2 Runtime (Evergreen):\n'
+            '     https://developer.microsoft.com/microsoft-edge/webview2/\n\n'
+            'Cài xong hãy khởi động lại máy rồi chạy app.exe lần nữa.\n'
+            '(Máy Windows 10/11 đã cập nhật thường có sẵn .NET 4.8.)'
+        )
+    else:
+        title = 'Stella Sora Tool — lỗi khởi động giao diện'
+        msg = (
+            'Không khởi động được giao diện desktop.\n\n'
+            f'Chi tiết: {exc}\n\n'
+            'Xem log tại thư mục log/ cạnh app.exe để biết thêm.'
+        )
+    _msgbox(title, msg)
+    sys.exit(1)
+
+
 def main() -> None:
     index = ROOT / 'assets' / 'gui' / 'index.html'
     if not index.exists():
         print(f'Không tìm thấy giao diện: {index} — assets/ phải nằm cạnh app.exe')
         sys.exit(1)
-    window = webview.create_window(
-        'Stella Sora Tool', str(index), js_api=Api(),
-        width=WIN_W, height=WIN_H, min_size=(1024, 640), hidden=True,
-    )
-    logger.info('SST desktop: mở cửa sổ')
-    webview.start(_fit_and_show, window, debug='--debug' in sys.argv)
+    try:
+        window = webview.create_window(
+            'Stella Sora Tool', str(index), js_api=Api(),
+            width=WIN_W, height=WIN_H, min_size=(1024, 640), hidden=True,
+        )
+        logger.info('SST desktop: mở cửa sổ')
+        webview.start(_fit_and_show, window, debug='--debug' in sys.argv)
+    except SystemExit:
+        raise
+    except Exception as e:  # noqa: BLE001 — chặn mọi lỗi backend GUI để báo thân thiện
+        _handle_gui_start_error(e)
 
 
 if __name__ == '__main__':

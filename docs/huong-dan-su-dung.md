@@ -31,6 +31,7 @@
 | Độ phân giải | **PHẢI đúng `1280 × 720`** (rộng × cao, game chạy ngang). Panel "Android Device" của MuMu hiển thị đúng con số này |
 | Game | **Stella Sora (bản EN)**, đã đăng nhập về màn Home |
 | Máy tính | Windows 10/11 |
+| .NET | **.NET Framework 4.8** + **WebView2 Runtime** (giao diện desktop cần). Win 10/11 đã update thường có sẵn; nếu `app.exe` báo lỗi *"Failed to resolve Python.Runtime…"* thì cài [.NET 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48) + [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) rồi khởi động lại máy |
 
 > ⚠️ **Độ phân giải phải chính xác 1280×720.** Tool nhận diện bằng ảnh mẫu ở đúng kích thước này và
 > **không tự co giãn**. Đặt sai (1080×1920, 1600×900…) sẽ khiến tool báo lỗi và dừng.

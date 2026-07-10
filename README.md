@@ -27,6 +27,12 @@ Dành cho người dùng cuối — **không cần cài đặt gì ngoài giả 
 
 > `config/` và `log/` sẽ tự tạo cạnh `app.exe` khi chạy lần đầu. Không cần cài Python.
 
+> 🧩 **Cần .NET Framework 4.8 + WebView2 Runtime** (giao diện desktop dùng WebView2). Windows 10/11
+> đã cập nhật thường **có sẵn** cả hai. Nếu mở `app.exe` báo lỗi **"Failed to resolve Python.Runtime…"**
+> tức là máy **thiếu .NET Framework 4.8** → cài 2 gói miễn phí của Microsoft rồi khởi động lại máy:
+> [.NET Framework 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48) ·
+> [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+
 > ⚠️ **Screenshot adb PHẢI ra đúng `1280 × 720`** (rộng × cao — game chạy ngang/landscape). Đây chính là
 > con số mà panel **"Android Device"** của MuMu hiển thị (`1280 × 720 | 240 DPI`). Tool nhận diện bằng ảnh
 > mẫu ở đúng kích thước này và **không tự co giãn**; đặt sang độ phân giải khác (1080×1920, 1600×900,

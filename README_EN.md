@@ -27,6 +27,13 @@ For end users — **nothing to install besides an emulator**:
 
 > `config/` and `log/` are created next to `app.exe` on first launch. No Python required.
 
+> 🧩 **Requires .NET Framework 4.8 + WebView2 Runtime** (the desktop UI uses WebView2). Updated
+> Windows 10/11 usually **already has both**. If launching `app.exe` shows
+> **"Failed to resolve Python.Runtime…"**, your machine is **missing .NET Framework 4.8** → install
+> these two free Microsoft packages and reboot:
+> [.NET Framework 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48) ·
+> [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+
 > ⚠️ **The adb screenshot MUST come out exactly `1280 × 720`** (width × height — the game runs
 > landscape). This is the number shown in MuMu's **"Android Device"** panel (`1280 × 720 | 240 DPI`).
 > The tool recognizes screens via templates cropped at exactly this size and does **not** auto-scale;

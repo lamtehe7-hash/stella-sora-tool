@@ -31,6 +31,7 @@
 | Resolution | **MUST be exactly `1280 × 720`** (width × height — the game runs landscape). MuMu's "Android Device" panel shows exactly this number |
 | Game | **Stella Sora (EN server)**, logged in and sitting at the Home screen |
 | PC | Windows 10/11 |
+| .NET | **.NET Framework 4.8** + **WebView2 Runtime** (the desktop UI needs them). Updated Win 10/11 usually ships both; if `app.exe` shows *"Failed to resolve Python.Runtime…"*, install [.NET 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48) + [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) and reboot |
 
 > ⚠️ **The resolution must be exactly 1280×720.** The tool recognizes the screen with template images
 > cropped at this exact size and does **not** auto-scale. Any other setting (1080×1920, 1600×900…)
