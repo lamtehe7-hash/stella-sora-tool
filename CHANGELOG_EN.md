@@ -1,5 +1,20 @@
 # Changelog — Stella Sora Tool
 
+## v0.4.6 (2026-07-10) — pre-release — Web-UI fallback when the desktop UI fails
+
+### Machines WITH .NET still crash "Failed to resolve Python.Runtime…"
+- Additional cause (beyond a missing .NET): a **path containing accented Vietnamese characters** —
+  `clr_loader` encodes the `Python.Runtime.dll` path to UTF-8 for the .NET shim, and an accented path
+  gets misread → the DLL won't load; or the files being **blocked by Windows (Mark-of-the-Web)** after
+  downloading. Both are common for Vietnamese users, and the machine **does have .NET 4.8**.
+- **Web-UI fallback**: when the desktop UI fails to start, the app now asks *"Open the web UI instead?"* —
+  press **Yes** to run the web interface (pywebio, opens in the browser) which **needs no .NET/clr**, so
+  it runs on any machine and any path. Press No to quit.
+- New **`app.exe --web`** flag: launch straight into the web UI (make a shortcut if the desktop UI always
+  fails on that machine).
+- Error message fixed: it now suggests **extracting to a non-accented path** (e.g. `C:\StellaSoraTool`) +
+  **Unblock**-ing the zip + installing .NET — instead of only mentioning .NET like v0.4.5.
+
 ## v0.4.5 (2026-07-10) — pre-release — Friendly error when the machine is missing .NET Framework
 
 ### Fix: `app.exe` crash "Failed to resolve Python.Runtime…" on machines without .NET

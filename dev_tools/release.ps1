@@ -63,19 +63,22 @@ Copy-Item "$repo\dist\app" $stage -Recurse
 @"
 Stella Sora Tool — bản portable $tag (Windows 64-bit)
 
-YÊU CẦU HỆ THỐNG (cài 1 lần, MIỄN PHÍ của Microsoft — Windows 10/11 đã update thường CÓ SẴN):
-  - .NET Framework 4.8:  https://dotnet.microsoft.com/download/dotnet-framework/net48
-  - WebView2 Runtime:    https://developer.microsoft.com/microsoft-edge/webview2/
-  Nếu mở app.exe hiện lỗi "Failed to resolve Python.Runtime..." = máy THIẾU .NET Framework 4.8
-  → cài gói .NET ở trên rồi khởi động lại máy và chạy lại.
-
 CÁCH DÙNG:
   1. Giải nén CẢ thư mục này — giữ app.exe, _internal và assets cạnh nhau.
+     ⚠️ Giải nén vào đường dẫn KHÔNG DẤU (vd C:\StellaSoraTool), TRÁNH thư mục tên tiếng Việt có dấu.
   2. Mở giả lập Android, bật ADB, đăng nhập Stella Sora (EN) về màn hình Home.
   3. Chạy app.exe. Lần đầu: vào Cấu hình nhập Serial ADB (vd 127.0.0.1:16384) + đường dẫn adb.
   4. Bật task muốn chạy rồi bấm Start.
 
 config/ và log/ tự tạo cạnh app.exe khi chạy lần đầu. Không cần cài Python.
+
+NẾU app.exe BÁO LỖI "Failed to resolve Python.Runtime..." (giao diện desktop lỗi):
+  → Bấm YES ở hộp thoại để MỞ BẰNG GIAO DIỆN WEB (trình duyệt) — không cần .NET, chạy mọi máy.
+    (hoặc chạy thẳng:  app.exe --web)
+  → Muốn dùng bản desktop thì thử: (1) giải nén vào đường dẫn KHÔNG dấu; (2) chuột phải file .zip →
+    Properties → Unblock → giải nén lại; (3) máy Windows cũ thì cài .NET Framework 4.8 + WebView2:
+      .NET 4.8:   https://dotnet.microsoft.com/download/dotnet-framework/net48
+      WebView2:   https://developer.microsoft.com/microsoft-edge/webview2/
 "@ | Set-Content "$stage\README.txt" -Encoding utf8
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Push-Location $relDir

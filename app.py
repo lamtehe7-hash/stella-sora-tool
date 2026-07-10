@@ -379,52 +379,63 @@ def _fit_and_show(window) -> None:
         window.show()
 
 
-def _msgbox(title: str, msg: str) -> None:
-    """Hộp thoại lỗi native (không cần .NET/console) — hoạt động cả khi build windowed."""
+def _msgbox(title: str, msg: str, flags: int = 0x10) -> int | None:
+    """Hộp thoại native (không cần .NET/console) — hoạt động cả khi build windowed.
+    flags mặc định = MB_ICONERROR. Trả về mã nút người dùng bấm (IDYES=6, IDNO=7) hoặc None."""
     try:
         import ctypes
-        ctypes.windll.user32.MessageBoxW(0, msg, title, 0x10)  # MB_ICONERROR
+        return ctypes.windll.user32.MessageBoxW(0, msg, title, flags)
     except Exception:
         print(f'{title}\n{msg}')
+        return None
+
+
+def _run_web_ui() -> None:
+    """Phương án dự phòng: chạy giao diện WEB (pywebio) — KHÔNG cần pythonnet/clr/.NET,
+    nên chạy được kể cả khi máy thiếu .NET, đường dẫn có dấu tiếng Việt, hoặc file bị chặn."""
+    import gui  # tái dùng trang pywebio của bản web (SST.exe)
+    from pywebio.platform.tornado import start_server
+    logger.info(f'Chuyển sang giao diện WEB: http://localhost:{gui.PORT}')
+    start_server(gui.main, port=gui.PORT, auto_open_webbrowser=True)  # blocking
 
 
 def _handle_gui_start_error(exc: Exception) -> None:
-    """Giao diện desktop chết khi khởi động (thường do máy thiếu .NET Framework để nạp
-    pythonnet/clr cho pywebview→winforms). Thay traceback PyInstaller khó hiểu bằng hướng
-    dẫn tiếng Việt rõ ràng. Xem HANDOVER §build/pyinstaller — Python.Runtime.dll là
-    netstandard2.0 nên cần .NET Framework ≥ 4.7.2 trên máy chạy."""
-    tb = traceback.format_exc()
+    """Giao diện desktop (pywebview→winforms→pythonnet→clr) chết khi khởi động. Nguyên nhân
+    thường gặp trên máy người tải: đường dẫn có ký tự tiếng Việt CÓ DẤU (clr_loader encode
+    path sai), file bị Windows chặn (Mark-of-the-Web), hoặc thiếu .NET Framework 4.8. Thay
+    traceback PyInstaller khó hiểu bằng hộp thoại tiếng Việt + đề nghị mở bằng giao diện WEB
+    (pywebio không cần clr). Xem [[exe-dotnet-requirement]] trong auto-memory."""
     logger.error(f'Không khởi động được giao diện desktop: {exc!r}')
-    logger.error(tb)
-    blob = (tb + repr(exc)).lower()
-    dotnet = any(k in blob for k in (
-        'clr', 'pythonnet', 'python.runtime', '.net', 'winforms', 'webview2', 'edgechromium',
-    ))
-    if dotnet:
-        title = 'Stella Sora Tool — thiếu thành phần Windows (.NET)'
-        msg = (
-            'Không mở được giao diện desktop vì máy đang THIẾU thành phần .NET của Windows '
-            '(app cần .NET Framework 4.8 để chạy cửa sổ giao diện).\n\n'
-            'Cách khắc phục — cài 2 gói MIỄN PHÍ của Microsoft rồi mở lại app:\n\n'
-            '  1) .NET Framework 4.8 (Runtime):\n'
-            '     https://dotnet.microsoft.com/download/dotnet-framework/net48\n\n'
-            '  2) WebView2 Runtime (Evergreen):\n'
-            '     https://developer.microsoft.com/microsoft-edge/webview2/\n\n'
-            'Cài xong hãy khởi động lại máy rồi chạy app.exe lần nữa.\n'
-            '(Máy Windows 10/11 đã cập nhật thường có sẵn .NET 4.8.)'
-        )
-    else:
-        title = 'Stella Sora Tool — lỗi khởi động giao diện'
-        msg = (
-            'Không khởi động được giao diện desktop.\n\n'
-            f'Chi tiết: {exc}\n\n'
-            'Xem log tại thư mục log/ cạnh app.exe để biết thêm.'
-        )
-    _msgbox(title, msg)
+    logger.error(traceback.format_exc())
+    title = 'Stella Sora Tool — không mở được giao diện desktop'
+    msg = (
+        'Không mở được giao diện desktop (giao diện này cần .NET Framework + đường dẫn "sạch").\n\n'
+        'Nếu muốn dùng bản DESKTOP, thử một trong các cách sau rồi mở lại app.exe:\n'
+        '  • Đường dẫn có DẤU tiếng Việt? → giải nén tool vào nơi KHÔNG dấu, vd C:\\StellaSoraTool\n'
+        '  • File bị chặn? → chuột phải file .zip → Properties → tick Unblock → giải nén lại\n'
+        '  • Windows cũ thiếu .NET? → cài .NET Framework 4.8 + WebView2 Runtime\n\n'
+        'HOẶC mở NGAY bằng GIAO DIỆN WEB (trong trình duyệt) — không cần .NET, chạy được mọi máy:\n\n'
+        '   → Bấm YES để mở giao diện web.\n'
+        '   → Bấm NO để thoát.'
+    )
+    ans = _msgbox(title, msg, 0x4 | 0x20)  # MB_YESNO | MB_ICONQUESTION
+    if ans == 6:  # IDYES
+        try:
+            _run_web_ui()
+            return
+        except Exception as e2:  # noqa: BLE001
+            logger.error(f'Mở giao diện web cũng lỗi: {e2!r}')
+            logger.error(traceback.format_exc())
+            _msgbox('Stella Sora Tool — lỗi',
+                    f'Không mở được cả giao diện web.\n\nChi tiết: {e2}\n\nXem thư mục log/ cạnh app.exe.')
     sys.exit(1)
 
 
 def main() -> None:
+    if '--web' in sys.argv:  # chạy thẳng giao diện web (máy lỗi desktop có thể tạo shortcut này)
+        logger.info('SST: chạy giao diện WEB theo cờ --web')
+        _run_web_ui()
+        return
     index = ROOT / 'assets' / 'gui' / 'index.html'
     if not index.exists():
         print(f'Không tìm thấy giao diện: {index} — assets/ phải nằm cạnh app.exe')

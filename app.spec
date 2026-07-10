@@ -6,9 +6,11 @@ from PyInstaller.utils.hooks import collect_all
 datas = []
 binaries = []
 hiddenimports = []
-for pkg in ('webview', 'clr_loader', 'pythonnet', 'adbutils'):
+# pywebio: cho giao diện WEB dự phòng (app.py::_run_web_ui) khi desktop/clr lỗi trên máy user
+for pkg in ('webview', 'clr_loader', 'pythonnet', 'adbutils', 'pywebio'):
     tmp_ret = collect_all(pkg)
     datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+hiddenimports += ['gui']  # module trang pywebio (app.py import lazy trong _run_web_ui)
 
 
 a = Analysis(

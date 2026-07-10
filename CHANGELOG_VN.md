@@ -1,5 +1,19 @@
 # Nhật ký thay đổi — Stella Sora Tool
 
+## v0.4.6 (2026-07-10) — pre-release — Giao diện WEB dự phòng khi desktop lỗi
+
+### Máy CÓ .NET vẫn crash "Failed to resolve Python.Runtime…"
+- Phát hiện thêm (ngoài thiếu .NET): lỗi còn do **đường dẫn chứa ký tự tiếng Việt CÓ DẤU** —
+  `clr_loader` encode đường dẫn `Python.Runtime.dll` sang UTF-8 rồi đưa vào shim .NET, đường dẫn có
+  dấu bị đọc sai → không nạp được DLL; hoặc do **file bị Windows chặn (Mark-of-the-Web)** khi tải từ
+  mạng. Cả hai rất phổ biến với người dùng VN, và **máy vẫn có .NET 4.8**.
+- **Giao diện WEB dự phòng**: khi giao diện desktop lỗi, app hiện hộp thoại hỏi *"Mở bằng giao diện
+  web?"* — bấm **Yes** là chạy giao diện web (pywebio, mở trong trình duyệt) **KHÔNG cần .NET/clr** →
+  chạy được mọi máy, mọi đường dẫn. Bấm No để thoát.
+- Thêm cờ **`app.exe --web`**: chạy thẳng giao diện web (máy luôn lỗi desktop có thể tạo shortcut này).
+- Thông báo lỗi sửa cho đúng: gợi ý **giải nén vào đường dẫn KHÔNG dấu** (vd `C:\StellaSoraTool`) +
+  **Unblock** file zip + cài .NET — thay vì chỉ nhắc .NET như v0.4.5.
+
 ## v0.4.5 (2026-07-10) — pre-release — Báo lỗi thân thiện khi máy thiếu .NET Framework
 
 ### Fix: `app.exe` crash "Failed to resolve Python.Runtime…" trên máy thiếu .NET

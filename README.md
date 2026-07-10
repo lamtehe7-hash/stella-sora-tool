@@ -27,11 +27,13 @@ Dành cho người dùng cuối — **không cần cài đặt gì ngoài giả 
 
 > `config/` và `log/` sẽ tự tạo cạnh `app.exe` khi chạy lần đầu. Không cần cài Python.
 
-> 🧩 **Cần .NET Framework 4.8 + WebView2 Runtime** (giao diện desktop dùng WebView2). Windows 10/11
-> đã cập nhật thường **có sẵn** cả hai. Nếu mở `app.exe` báo lỗi **"Failed to resolve Python.Runtime…"**
-> tức là máy **thiếu .NET Framework 4.8** → cài 2 gói miễn phí của Microsoft rồi khởi động lại máy:
-> [.NET Framework 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48) ·
-> [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+> 🧩 **Nếu `app.exe` báo lỗi "Failed to resolve Python.Runtime…"** (giao diện desktop dùng WebView2/.NET):
+> - Cách nhanh nhất: khi báo lỗi, bấm **Yes** để **mở bằng giao diện WEB** (trình duyệt) — không cần
+>   .NET, chạy mọi máy. Hoặc chạy thẳng `app.exe --web`.
+> - Muốn dùng bản desktop thì thử: (1) **giải nén tool vào đường dẫn KHÔNG dấu** (vd `C:\StellaSoraTool`,
+>   tránh thư mục có tên tiếng Việt có dấu); (2) chuột phải file `.zip` → Properties → **Unblock** → giải
+>   nén lại; (3) máy Windows cũ thì cài [.NET Framework 4.8](https://dotnet.microsoft.com/download/dotnet-framework/net48)
+>   + [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
 > ⚠️ **Screenshot adb PHẢI ra đúng `1280 × 720`** (rộng × cao — game chạy ngang/landscape). Đây chính là
 > con số mà panel **"Android Device"** của MuMu hiển thị (`1280 × 720 | 240 DPI`). Tool nhận diện bằng ảnh
